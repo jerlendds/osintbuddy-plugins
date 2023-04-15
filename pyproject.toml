@@ -52,7 +52,7 @@ Source = "https://github.com/jerlendds/osintbuddy"
 Tracker = "https://github.com/jerlendds/osintbuddy/issues"
 
 [tool.flit.module]
-name = "python_package"
+name = "osintbuddy"
 
 [tool.bandit]
 exclude_dirs = ["build","dist","tests","scripts"]
