@@ -16,8 +16,8 @@ class BasePlugin(object):
         self.repository: str = None
         self.authors = List[str]
         self._base_plugin_endpoint = slugify(self.node_name)
-        self._endpoints = self.generate_endpoints()
         self._router: APIRouter = APIRouter(prefix=self._base_plugin_endpoint)
+        self._generate_endpoints()
 
     def request(self, transform: str, **kwargs):
         return self.transforms[transform](**kwargs)
@@ -25,7 +25,6 @@ class BasePlugin(object):
     def _generate_endpoints(self):
         if self.transforms is None:
             return
-        endpoints = []
         for transform in self.transforms.keys():
             route = str.encode(
                 f"{self._base_plugin_endpoint}{transform}{self.repository}"
@@ -35,7 +34,6 @@ class BasePlugin(object):
                 endpoint_route,
                 endpoint=self.transforms[transform]
             )
-        return endpoints
 
 
 class Plugin(BasePlugin):
