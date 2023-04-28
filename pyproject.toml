@@ -23,7 +23,7 @@ requires-python = ">=3.7"
 dynamic = ["version"]
 dependencies = [
   'fastapi==0.95.1',
-  'neo4j==5.7.0',
+  'neo4j==5.8.0',
   'pydantic==1.10.7'
 ]
 
