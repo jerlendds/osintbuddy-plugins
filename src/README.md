@@ -11,3 +11,4 @@ The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osin
 @todo
 
 ## Creating custom nodes
+
