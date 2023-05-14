@@ -1,3 +1,6 @@
+[![Total Downloads](https://static.pepy.tech/badge/osintbuddy)](https://pepy.tech/project/osintbuddy)
+[![Downloads](https://static.pepy.tech/badge/osintbuddy/week)](https://pepy.tech/project/osintbuddy)
+
 # OSINTBuddy plugins and extensions
 
 The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osintbuddy), coming soon...

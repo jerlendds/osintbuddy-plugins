@@ -110,6 +110,7 @@ class OBPlugin(object, metaclass=OBRegistry):
     icon: str = 'atom-2'
     transform_icons: dict = {}
     show_label = True
+    style: dict = {}
 
     def __init__(self):
         transforms = self.__class__.__dict__.values()
