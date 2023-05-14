@@ -3,7 +3,7 @@
 
 # OSINTBuddy plugins
 
-The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osintbuddy), coming soon...
+The plugins library for [osintbuddy](https://github.com/jerlendds/osintbuddy)
 ![osintbuddy-demo](https://github.com/jerlendds/osintbuddy/assets/29207058/c01357a9-9e55-44e3-9734-c84130bd110b)
 
 This project follows the Python Standards declared in PEP 621. It uses a pyproject.yaml file to configure the project and Flit to simplify the build process and publish to PyPI.
