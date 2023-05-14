@@ -122,7 +122,7 @@ class OBPlugin(object, metaclass=OBRegistry):
         ]
 
     def __call__(self):
-        return self.node_blueprint()
+        return self.blueprint()
 
     @staticmethod
     def _map_node_elements(element, kwargs):
@@ -137,7 +137,7 @@ class OBPlugin(object, metaclass=OBRegistry):
         return element
 
     @classmethod
-    def node_blueprint(cls, **kwargs):
+    def blueprint(cls, **kwargs):
         """
         Generate and return a dictionary representing the plugins node.
         Includes label, name, color, icon, and a list of all elements
@@ -151,11 +151,11 @@ class OBPlugin(object, metaclass=OBRegistry):
         node['elements'] = []
         for element in cls.node:
             if type(element) is list:
+                e = []
                 for elm in element:
-                    node['elements'].append(cls._map_node_elements(elm.json(), kwargs))
+                    e.append(cls._map_node_elements(elm.json(), kwargs))
+                node['elements'].append(e)
             else:
-                print('element: ', element.json(), to_snake_case(element.json()['label']))
-                print('kwargs: ', kwargs, '\n\n')
                 e = cls._map_node_elements(element.json(), kwargs)
                 node['elements'].append(e)
         return node
