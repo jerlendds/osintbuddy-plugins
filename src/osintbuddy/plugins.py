@@ -148,6 +148,7 @@ class OBPlugin(object, metaclass=OBRegistry):
         node['name'] = cls.name
         node['color'] = cls.color
         node['icon'] = cls.icon
+        node['style'] = cls.style
         node['elements'] = []
         for element in cls.node:
             if type(element) is list:
