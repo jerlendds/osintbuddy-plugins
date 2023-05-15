@@ -1,116 +1,77 @@
 [![Total Downloads](https://static.pepy.tech/badge/osintbuddy)](https://pepy.tech/project/osintbuddy)
 [![Downloads](https://static.pepy.tech/badge/osintbuddy/week)](https://pepy.tech/project/osintbuddy)
 
-# OSINTBuddy plugins
+# Extending OSINTBuddy with plugins
 
 The plugins library for [osintbuddy](https://github.com/jerlendds/osintbuddy)
 ![osintbuddy-demo](https://github.com/jerlendds/osintbuddy/assets/29207058/c01357a9-9e55-44e3-9734-c84130bd110b)
 
 This project follows the Python Standards declared in PEP 621. It uses a pyproject.yaml file to configure the project and Flit to simplify the build process and publish to PyPI.
 
-## Extending OSINTBuddy with plugins
 
-The OsintBuddy API provides an easy way to create and extend plugins in a modular manner. In the given code example, the IPAddressPlugin is created as an extension to the OsintBuddy framework using the OBPlugin class. This IP address plugin has the following features:
+## Creating your first plugin
 
-1. Customizable plugin attributes such as label, name, and color.
-2. A node definition for user input, in this case, a TextInput for IP addresses.
-3. A transform method (transform_to_website) with a specified label and icon. This method can take the input data (an IP address) and convert it to a different format, like a website.
-4. Error handling capabilities using the OBPluginError class if an issue occurs during data transformation.
+In this guide, we will dive into creating a custom plugin for OSINTBuddy that extends its capabilities. This will enable you to incorporate additional sources and transformations into the OSINTBuddy toolbox. We will use the provided code example as a reference to build our plugin.
 
-The extensible nature of the OsintBuddy API allows developers to seamlessly integrate custom plugins such as an IPAddressPlugin into their applications and workflows, simplifying the process of transforming and manipulating data across various formats. 
-Not shown here is also the ability to access a selenium driver context with `kwargs['get_driver']()`
+### Step-by-step guide to create a new plugin
+
+Start by importing the necessary modules:
 
 ```py
-from osintbuddy.plugins import OBPlugin
-from osintbuddy.node import TextInput
-
-class IPAddressPlugin(OBPlugin):
-    label = 'IP'
-    name = 'IP address'
-    color = '#F47C00'
-    node = [
-        TextInput(label='IP Address', icon='map-pin')  # tabler-icon names
-    ]
-
-    @transform(label='To website', icon='world', prompt="""""")
-    def transform_to_website(self, node, **kwargs):
-        try:
-            resolved = socket.gethostbyaddr(node['data'][0])
-            if len(resolved) >= 1:
-                blueprint = WebsitePlugin.blueprint(domain=resolved[0])
-                return blueprint
-            else:
-                raise OBPluginError('No results found')
-        except (socket.gaierror, socket.herror):
-            raise OBPluginError('We ran into a socket error. Please try again')
+import socket
+import osintbuddy as ob
 ```
 
-## Creating a plugin with dependent plugins
+Define a class for your plugin, inheriting from `ob.Plugin`. Set the required attributes such as `label`, and optionally set an `icon` like `world-www` (using [tabler-icon](https://tabler-icons.io/) names), and a `node` which contains a list of elements used as a blueprint for creating the node displayed on the OSINTBuddy UI.
 
 ```py
-
-class GoogleResult(OBPlugin):
-    label = 'Google Result'
-    show_label = False
-    name = 'Google result'
-    color = '#308e49'
-    node = [
-        Title(label='result'),
-        CopyText(label='url')
-    ]
-
-    @transform(label='To website', icon='world')
-    def transform_to_website(self, node, **kwargs):
-        blueprint = WebsitePlugin.blueprint(
-            domain=urlparse(node['data'][3]).netloc
-        )
-        return blueprint
-
-
-class WebsitePlugin(OBPlugin):
+class WebsitePlugin(ob.Plugin):
     label = 'Website'
     name = 'Website'
     color = '#1D1DB8'
     icon = 'world-www'
     node = [
-        TextInput(label='Domain', icon='world-www'),
+        ob.elements.TextInput(label='Domain', icon='world-www'),
     ]
-
-    @transform(label='To google', icon='world')
-    def transform_to_google(self, node, **kwargs):
-        # @todo
-        domain = node['data'][0]
-        query = f"{domain}"
-        results = []
-        for result in GoogleSearchPlugin().search_google(query=query, pages="3"):
-            blueprint = GoogleResult.blueprint(
-                result={
-                    'title': result.get('title'),
-                    'subtitle': result.get('breadcrumb'),
-                    'text': result.get('description'),
-                },
-                url=result.get('url')
-            )
-            results.append(blueprint)
-        return results
 ```
 
-## Development
+Now, define a transformation method to gather and transform the data from the input node. In this case, the transform_to_ip function uses the `socket.gethostbyname()` Python module to obtain the IP address for a given domain. Decorate the method with `@transform()` and set the metadata attributes such as `label` and `icon`.
 
-1. Create and active a python3 venv
-2. `python -m pip install .`
-3. `pip install .[test]`
-4. Develop...
+```py
+@transform(label='To IP', icon='building-broadcast-tower')
+def transform_to_ip(self, node, **kwargs):
+    blueprint = IPAddressPlugin.blueprint(
+        ip_address=socket.gethostbyname(node['data'][0])
+    )
+    return blueprint
+```
+## Using the new plugin
+
+To use the new plugin, simply add it to the existing OSINTBuddy plugins folder inside the application, in development mode it will be detected automatically and loaded by the platform. Once added, you can access your 'Website' plugin and use the 'To IP' transformation.
+
+Creating a custom plugin for OSINTBuddy is an easy and effective way to enhance the capabilities of the tool, allowing you to fetch information from additional sources or transform the data in new ways. By following this guide and using the provided code example as a reference, you'll be able to create your own unique plugins to extend the functionality of OSINTBuddy to fit your specific needs.
 
 
-## License
-[MIT](https://choosealicense.com/licenses/mit/)
+### Full example
 
+```py
+import socket
+import osintbuddy as ob
 
-## Project Organization
+class WebsitePlugin(ob.Plugin):
+    label = 'Website'
+    name = 'Website'
+    color = '#1D1DB8'
+    icon = 'world-www'
+    node = [
+        ob.elements.TextInput(label='Domain', icon='world-www'),
+    ]
 
-- `.github/workflows`: Contains GitHub Actions used for building, testing, and publishing.
-- `src`: source code
-  - `src/node`: elements used to define a nodes appearance and input elements  
-- `tests`: Contains Python-based test cases to validate source code.
-- `pyproject.toml`: Contains metadata about the project and configurations for additional tools used to format, lint, type-check, and analyze Python code.
+    @transform(label='To IP', icon='building-broadcast-tower')
+    def transform_to_ip(self, node, **kwargs):
+        blueprint = IPAddressPlugin.blueprint(
+            ip_address=socket.gethostbyname(node['data'][0])
+        )
+        return blueprint
+```
+
