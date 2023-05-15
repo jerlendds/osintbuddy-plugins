@@ -122,8 +122,8 @@ class OBPlugin(object, metaclass=OBRegistry):
             if hasattr(func, 'icon') and hasattr(func, 'label')
         ]
 
-    async def __call__(self):
-        return await self.blueprint()
+    def __call__(self):
+        return self.blueprint()
 
     @staticmethod
     def _map_node_elements(element, kwargs):
