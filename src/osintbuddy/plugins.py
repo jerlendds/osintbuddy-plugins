@@ -3,7 +3,7 @@ import importlib
 from typing import List, Any
 from collections import defaultdict
 # from osintbuddy.utils import slugify
-from osintbuddy.node.base import BaseNode
+from osintbuddy.elements.base import BaseNode
 from osintbuddy.errors import OBPluginError
 from osintbuddy.utils import to_snake_case
 
@@ -18,7 +18,7 @@ class OBRegistry(type):
         Initializes the OBRegistry metaclass by adding the plugin class
         and its label if it is a valid plugin.
         """
-        if name != 'OBPlugin' and issubclass(cls, OBPlugin):
+        if name != 'OBPlugin' and name != 'Plugin' and issubclass(cls, OBPlugin):
             label = cls.label.strip()
             if cls.show_label is True:
                 OBRegistry.ui_labels.append(label)
@@ -28,7 +28,7 @@ class OBRegistry(type):
             OBRegistry.plugins.append(cls)
 
     @classmethod
-    def get_plugin(cls, plugin_label: str):
+    async def get_plugin(cls, plugin_label: str):
         """
         Returns the corresponding plugin class for a given plugin_label or
         'None' if not found.
@@ -87,8 +87,8 @@ def transform(label, icon='list', prompt=None):
     :return: A decorator for the plugin transform method.
     """
     def decorator_transform(func):
-        def wrapper(self, node, **kwargs):
-            return func(self=self, node=node, **kwargs)
+        async def wrapper(self, node, **kwargs):
+            return await func(self=self, node=node, **kwargs)
         wrapper.label = label
         wrapper.icon = icon
         if prompt is not None:
@@ -122,8 +122,8 @@ class OBPlugin(object, metaclass=OBRegistry):
             if hasattr(func, 'icon') and hasattr(func, 'label')
         ]
 
-    def __call__(self):
-        return self.blueprint()
+    async def __call__(self):
+        return await self.blueprint()
 
     @staticmethod
     def _map_node_elements(element, kwargs):
@@ -162,7 +162,7 @@ class OBPlugin(object, metaclass=OBRegistry):
                 node['elements'].append(e)
         return node
 
-    def _get_transform(self, transform_type: str, node, **kwargs) -> Any:
+    async def _get_transform(self, transform_type: str, node, **kwargs) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return
@@ -172,12 +172,12 @@ class OBPlugin(object, metaclass=OBRegistry):
         """
         if self.transforms and self.transforms[transform_type]:
             try:
-                transform = self.transforms[transform_type](
+                transform = await self.transforms[transform_type](
                     self=self,
                     node=node,
                     **kwargs
                 )
-                if not isinstance(transform, list):
+                if type(transform) != list:
                     return [transform]
                 return transform
             except OBPluginError as e:

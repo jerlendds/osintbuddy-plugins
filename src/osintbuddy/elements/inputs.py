@@ -1,5 +1,5 @@
 from typing import List, Any
-from osintbuddy.node.base import BaseInput
+from osintbuddy.elements.base import BaseInput
 
 
 class UploadFileInput(BaseInput):

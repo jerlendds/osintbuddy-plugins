@@ -22,35 +22,47 @@ classifiers = [
 requires-python = ">=3.7"
 dynamic = ["version"]
 dependencies = [
+  "selenium==4.9.0",
+  "pydantic==1.10.7",
+  "httpx==0.24.0"
 ]
-
 [project.optional-dependencies]
-spark = [
-    "pyspark>=3.0.0"
-]
 test = [
-    "bandit[toml]==1.7.4",
-    "black==23.1.0",
-    "check-manifest==0.48",
-    "flake8-bugbear==23.3.12",
-    "flake8-docstrings",
-    "flake8-formatter_junit_xml",
-    "flake8",
-    "flake8-pyproject",
-    "pre-commit==2.17.0",
-    "pylint==2.17.0",
-    "pylint_junit",
-    "pytest-cov==3.0.0",
-    "pytest-mock<3.10.1",
-    "pytest-runner",
-    "pytest==7.2.2",
-    "pytest-github-actions-annotate-failures",
-    "shellcheck-py==0.9.0.2"
+    "astroid==2.15.4",
+    "colorama==0.4.6",
+    "dill==0.3.6",
+    "eradicate==2.2.0",
+    "exceptiongroup==1.1.1",
+    "iniconfig==2.0.0",
+    "isort==5.12.0",
+    "lazy-object-proxy==1.9.0",
+    "mando==0.7.1",
+    "mccabe==0.7.0",
+    "mypy==1.3.0",
+    "mypy-extensions==1.0.0",
+    "packaging==23.1",
+    "platformdirs==3.5.1",
+    "pluggy==1.0.0",
+    "pycodestyle==2.10.0",
+    "pydocstyle==6.3.0",
+    "pyflakes==3.0.1",
+    "pylama==8.4.1",
+    "pylint==2.17.4",
+    "pytest==7.3.1",
+    "radon==6.0.1",
+    "six==1.16.0",
+    "snowballstemmer==2.2.0",
+    "toml==0.10.2",
+    "tomli==2.0.1",
+    "tomlkit==0.11.8",
+    "typing-extensions==4.5.0",
+    "vulture==2.7",
+    "wrapt==1.15.0"
 ]
 
 [project.urls]
 Documentation = "https://docs-osintbuddy-com.vercel.app/"
-Source = "https://github.com/jerlendds/plugins.osintbuddy.com"
+Source = "https://github.com/jerlendds/osintbuddy-plugins"
 Tracker = "https://github.com/jerlendds/osintbuddy/issues"
 
 [tool.flit.module]
@@ -113,7 +125,7 @@ executionEnvironments = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov-report xml:coverage.xml --cov src --cov-fail-under 0 --cov-append -m 'not integration'"
+addopts = ""
 pythonpath = [
   "src"
 ]

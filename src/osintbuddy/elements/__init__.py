@@ -1,5 +1,5 @@
-from osintbuddy.node.base import BaseInput  # noqa
-from osintbuddy.node.displays import (  # noqa
+from osintbuddy.elements.base import BaseInput  # noqa
+from osintbuddy.elements.displays import (  # noqa
     Title,
     Text,
     CopyText,
@@ -12,7 +12,7 @@ from osintbuddy.node.displays import (  # noqa
     Table,
     Empty
 )
-from osintbuddy.node.inputs import (  # noqa
+from osintbuddy.elements.inputs import (  # noqa
     UploadFileInput,
     TextInput,
     DropdownInput,

@@ -1,4 +1,4 @@
-from osintbuddy.node.base import BaseDisplay
+from osintbuddy.elements.base import BaseDisplay
 
 
 class Title(BaseDisplay):

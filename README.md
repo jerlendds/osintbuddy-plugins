@@ -95,7 +95,17 @@ class WebsitePlugin(OBPlugin):
         return results
 ```
 
-GoogleResult holds information about a specific Google search result. It includes a transform_to_website method that appears on the UI context menu when you right click a GoogleResult node. When someone executes the transform the Google result information is sent to the transform where it's then turned into Website node after processing some of the sent data.
+## Development
+
+1. Create and active a python3 venv
+2. `python -m pip install .`
+3. `pip install .[test]`
+4. Develop...
+
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
+
 
 ## Project Organization
 
@@ -104,5 +114,3 @@ GoogleResult holds information about a specific Google search result. It include
   - `src/node`: elements used to define a nodes appearance and input elements  
 - `tests`: Contains Python-based test cases to validate source code.
 - `pyproject.toml`: Contains metadata about the project and configurations for additional tools used to format, lint, type-check, and analyze Python code.
-
-
