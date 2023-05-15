@@ -67,8 +67,8 @@ class WebsitePlugin(ob.Plugin):
         ob.elements.TextInput(label='Domain', icon='world-www'),
     ]
 
-    @transform(label='To IP', icon='building-broadcast-tower')
-    def transform_to_ip(self, node, **kwargs):
+    @ob.transform(label='To IP', icon='building-broadcast-tower')
+    async def transform_to_ip(self, node, **kwargs):
         blueprint = IPAddressPlugin.blueprint(
             ip_address=socket.gethostbyname(node['data'][0])
         )
