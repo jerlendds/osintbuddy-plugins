@@ -61,7 +61,7 @@ test = [
 ]
 
 [project.urls]
-Documentation = "https://docs-osintbuddy-com.vercel.app/"
+Documentation = "https://docs.osintbuddy.com/"
 Source = "https://github.com/jerlendds/osintbuddy-plugins"
 Tracker = "https://github.com/jerlendds/osintbuddy/issues"
 
