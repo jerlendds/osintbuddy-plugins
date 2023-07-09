@@ -6,8 +6,9 @@ from __future__ import annotations
 from osintbuddy.plugins import (
     OBRegistry as Registry,
     OBPlugin as Plugin,
+    OBAuthorUse as PluginUse,
     discover_plugins,
     transform
 )
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"

@@ -3,6 +3,10 @@
 The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osintbuddy). Currently in beta, expect changes to come...
 
 
+### **NOTICE:** Major update to plugins, any created plugins will have to be updated to use a more convenient data access method:
+  - Remove `name` from `ob.Plugin`
+  - @todo decide on pydantic or a plain dict for passing node values by label
+
 ## Creating your first plugin
 
 In this guide, we will dive into creating a custom plugin for OSINTBuddy that extends its capabilities. This will enable you to incorporate additional sources and transformations into the OSINTBuddy toolbox. We will use the provided code example as a reference to build our plugin.

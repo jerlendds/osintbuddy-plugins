@@ -81,7 +81,7 @@ class DropdownInput(BaseInput):
     """
     node_type: str = "dropdown"
 
-    def __init__(self, options=[], value={'label': '', 'tooltip': ''}, **kwargs):
+    def __init__(self, options=[], value={'label': '', 'tooltip': '', 'value': ''}, **kwargs):
         super().__init__(**kwargs)
         self.options: List[any] = options
         self.value: dict = value

@@ -1,6 +1,6 @@
-class BaseNode(object):
+class BaseElement(object):
     """
-    The BaseNode class represents a basic building block used in OsintBuddy
+    The BaseElement class represents a basic building block used in OsintBuddy
     plugins. It is designed to implement the base styles used
     in other nodes that can render a nodes element
     with a specific element type, label, and style on the OSINTbuddy UI.
@@ -35,9 +35,9 @@ class BaseNode(object):
         }
 
 
-class BaseInput(BaseNode):
+class BaseInput(BaseElement):
     pass
 
 
-class BaseDisplay(BaseNode):
+class BaseDisplay(BaseElement):
     pass

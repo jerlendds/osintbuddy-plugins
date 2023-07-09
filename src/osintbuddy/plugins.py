@@ -1,11 +1,21 @@
 import os
 import importlib
-from typing import List, Any
+from typing import List, Any, Callable
 from collections import defaultdict
+from pydantic import create_model, BaseModel
+import undetected_chromedriver as uc
 # from osintbuddy.utils import slugify
-from osintbuddy.elements.base import BaseNode
+from osintbuddy.elements.base import BaseElement
 from osintbuddy.errors import OBPluginError
 from osintbuddy.utils import to_snake_case
+
+def driver() -> uc.Chrome:
+    pass
+
+# @todo add permission system and display what parts of system plugin can access
+class OBAuthorUse(BaseModel):
+    get_driver: Callable[[], uc.Chrome]
+    get_graph: Callable[[], None]  # @todo
 
 
 class OBRegistry(type):
@@ -37,7 +47,7 @@ class OBRegistry(type):
         :return: The plugin class or None if not found.
         """
         for idx, label in enumerate(cls.labels):
-            if label == plugin_label:
+            if to_snake_case(label) == to_snake_case(plugin_label):
                 return cls.plugins[idx]
         return None
 
@@ -71,7 +81,7 @@ def discover_plugins(
     return OBRegistry.plugins
 
 
-def transform(label, icon='list', prompt=None):
+def transform(label, icon='list', prompt=None, edge_label='transformed_to'):
     """
     A decorator add transforms to an osintbuddy plugin.
 
@@ -91,6 +101,7 @@ def transform(label, icon='list', prompt=None):
             return await func(self=self, node=node, **kwargs)
         wrapper.label = label
         wrapper.icon = icon
+        wrapper.edge_label = edge_label
         if prompt is not None:
             wrapper.prompt = prompt
 
@@ -103,19 +114,17 @@ class OBPlugin(object, metaclass=OBRegistry):
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    node: List[BaseNode]
-    name: str = 'Plugin Node'
+    node: List[BaseElement]
     color: str = '#145070'
     label: str = ''
     icon: str = 'atom-2'
-    transform_icons: dict = {}
     show_label = True
     style: dict = {}
 
     def __init__(self):
         transforms = self.__class__.__dict__.values()
         self.transforms = {
-            func.label: func for func in transforms if hasattr(func, 'label')
+            to_snake_case(func.label): func for func in transforms if hasattr(func, 'label')
         }
         self.transform_labels = [
             {'label': func.label, 'icon': func.icon} for func in transforms
@@ -126,7 +135,7 @@ class OBPlugin(object, metaclass=OBRegistry):
         return self.blueprint()
 
     @staticmethod
-    def _map_node_elements(element, kwargs):
+    def _map_graph_data_labels(element, kwargs):
         label = to_snake_case(element['label'])
         for passed_label in kwargs:
             if passed_label == label:
@@ -146,23 +155,22 @@ class OBPlugin(object, metaclass=OBRegistry):
         """
         node = defaultdict(None)
         node['label'] = cls.label
-        node['name'] = cls.name
-        node['color'] = cls.color
+        node['color'] = cls.color if cls.color else '#145070'
         node['icon'] = cls.icon
         node['style'] = cls.style
         node['elements'] = []
         for element in cls.node:
-            if type(element) is list:
-                e = []
-                for elm in element:
-                    e.append(cls._map_node_elements(elm.json(), kwargs))
-                node['elements'].append(e)
+            if isinstance(element, list):
+                node['elements'].append([
+                    cls._map_graph_data_labels(elm.json(), kwargs)
+                    for elm in element
+                ])
             else:
-                e = cls._map_node_elements(element.json(), kwargs)
-                node['elements'].append(e)
+                element_row = cls._map_graph_data_labels(element.json(), kwargs)
+                node['elements'].append(element_row)
         return node
 
-    async def _get_transform(self, transform_type: str, node, **kwargs) -> Any:
+    async def get_transform(self, transform_type: str, node, use: OBAuthorUse) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return
@@ -170,16 +178,56 @@ class OBPlugin(object, metaclass=OBRegistry):
             None if the plugin doesn't provide a transform
             for the transform_type.
         """
+        transform_type = to_snake_case(transform_type)
+        print('transform_type', transform_type)
+        print('transforms', self.transforms)
         if self.transforms and self.transforms[transform_type]:
             try:
                 transform = await self.transforms[transform_type](
                     self=self,
-                    node=node,
-                    **kwargs
+                    node=self._map_to_transform_data(node),
+                    use=use
                 )
-                if type(transform) != list:
+                edge_label = self.transforms[transform_type].edge_label
+                if not isinstance(transform, list):
+                    transform['edge_label'] = edge_label
                     return [transform]
+                [
+                    n.__setitem__('edge_label', edge_label)
+                    for n in transform
+                ]
                 return transform
-            except OBPluginError as e:
-                raise OBPluginError(e)
+            except (Exception, OBPluginError) as e:
+                if isinstance(e, OBPluginError):
+                    raise OBPluginError(e)
+                raise OBPluginError(f'This plugin has run into an unhandled error: {e}')
         return None
+
+    @staticmethod
+    def _map_element(transform_map: dict, element: dict):
+        label = to_snake_case(element.pop('label', None))
+        transform_map[label] = {}
+        type = element.pop('type', None)
+        element.pop('icon', None)
+        element.pop('placeholder', None)
+        element.pop('style', None)
+        element.pop('options', None)
+        for k, v in element.items():
+            if (isinstance(v, str) and len(element.values()) == 1) or type == 'dropdown':
+                transform_map[label] = v
+            else:
+                transform_map[label][k] = v
+
+    @classmethod
+    def _map_to_transform_data(cls, node: dict):
+        transform_map = {}
+        data = node.get('data', {})
+        model_label = data.get('label')
+        elements = data.get('elements', [])
+        for element in elements:
+            if isinstance(element, list):
+                [cls._map_element(transform_map, elm) for elm in element]
+            else:
+                cls._map_element(transform_map, element)
+        model = create_model(model_label, **transform_map)
+        return model()

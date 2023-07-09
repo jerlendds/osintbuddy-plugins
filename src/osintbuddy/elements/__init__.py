@@ -1,4 +1,4 @@
-from osintbuddy.elements.base import BaseInput  # noqa
+from osintbuddy.elements.base import BaseElement, BaseInput, BaseDisplay  # noqa
 from osintbuddy.elements.displays import (  # noqa
     Title,
     Text,
