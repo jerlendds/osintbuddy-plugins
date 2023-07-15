@@ -1,6 +1,7 @@
 name: Python Publish Workflow
 on:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   publish:
