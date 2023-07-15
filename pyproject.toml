@@ -22,7 +22,6 @@ dependencies = [
   "pydantic>=1.10.8",
   "httpx>=0.24.1",
   "SQLAlchemy>=2.0.12",
-  "gremlinpy==git+https://github.com/jerlendds/gremlinpy.git@7d3033e6a55ed9cb1f982ec3b58ca233e01c58e3"
 ]
 [project.optional-dependencies]
 test = [
@@ -56,7 +55,6 @@ test = [
   "typing-extensions==4.5.0",
   "vulture==2.7",
   "wrapt==1.15.0",
-  "gremlinpy==git+https://github.com/jerlendds/gremlinpy.git@7d3033e6a55ed9cb1f982ec3b58ca233e01c58e3"
 ]
 
 [project.urls]
