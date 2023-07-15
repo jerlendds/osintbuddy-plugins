@@ -1,77 +1,99 @@
-[![Total Downloads](https://static.pepy.tech/badge/osintbuddy)](https://pepy.tech/project/osintbuddy)
-[![Downloads](https://static.pepy.tech/badge/osintbuddy/week)](https://pepy.tech/project/osintbuddy)
+# OSINTBuddy plugins and extensions
 
-# Extending OSINTBuddy with plugins
-
-The plugins library for [osintbuddy](https://github.com/jerlendds/osintbuddy)
-![osintbuddy-demo](https://github.com/jerlendds/osintbuddy/assets/29207058/c01357a9-9e55-44e3-9734-c84130bd110b)
-
-This project follows the Python Standards declared in PEP 621. It uses a pyproject.yaml file to configure the project and Flit to simplify the build process and publish to PyPI.
+The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osintbuddy).
 
 
-## Creating your first plugin
+![ob-demo 2023-07-14 20-51](https://github.com/jerlendds/osintbuddy/assets/29207058/b69e08f3-ac2a-4cef-9a85-713e7df6b12f)
 
-In this guide, we will dive into creating a custom plugin for OSINTBuddy that extends its capabilities. This will enable you to incorporate additional sources and transformations into the OSINTBuddy toolbox. We will use the provided code example as a reference to build our plugin.
 
-### Step-by-step guide to create a new plugin
+***Please note:** [OSINTBuddy plugins](https://github.com/jerlendds/osintbuddy-plugins) are still in early alpha and breaking changes may occasionally occur in the API. That said, if you remain on the `main` branch and avoid accessing protected methods we will try our best to avoid introducing breaking changes.*
 
-Start by importing the necessary modules:
+### **NOTICE:** There has been a major update to plugins, any created plugins will have to be updated to use the new, and more convenient data access method:
+  - Remove `name` from any `ob.Plugin`
+  - Update `node['data']` access to be `node.label_defined_in_node`
+    - Please see the introduction to the plugin system below
 
-```py
-import socket
-import osintbuddy as ob
-```
 
-Define a class for your plugin, inheriting from `ob.Plugin`. Set the required attributes such as `label`, and optionally set an `icon` like `world-www` (using [tabler-icon](https://tabler-icons.io/) names), and a `node` which contains a list of elements used as a blueprint for creating the node displayed on the OSINTBuddy UI.
+The osintbuddy plugin system at its core is very simple. An `OBRegistry` class holds all registered `OBPlugin` classes within the application. This registry is loaded into the [osintbuddy application](https://github.com/jerlendds/osintbuddy/) where it is then used to load the available entities for the user when they access a project graph, load transforms when a user opens the context menu of a node, and perform transformations which expect a `Plugin.blueprint()` to be returned. The returned data of a transform decorated method will be automatically mapped to a [JanusGraph](https://janusgraph.org/) database through [gremlin](https://tinkerpop.apache.org/) according to the labels *(as snakecase)* you previously set in the classes `node` for whatever `Plugin.blueprint()`
+you return.
+ 
+To make this a bit more clear please see the below example...
 
 ```py
-class WebsitePlugin(ob.Plugin):
-    label = 'Website'
-    name = 'Website'
-    color = '#1D1DB8'
-    icon = 'world-www'
+from pydantic import BaseModel
+import osintbuddy import transform, Plugin
+from osintbuddy.elements import TextInput, DropdownInput, Title, CopyText
+from osintbuddy.errors import OBPluginError
+
+
+class CSESearchResults(Plugin):
+    label = "CSE Result"
+    name = "CSE result"
+    show_label = False  # do not show this on the entities dialog 
+    # the user sees on the left of the project graph screen
+    color = "#058F63"
     node = [
-        ob.elements.TextInput(label='Domain', icon='world-www'),
-    ]
-```
-
-Now, define a transformation method to gather and transform the data from the input node. In this case, the transform_to_ip function uses the `socket.gethostbyname()` Python module to obtain the IP address for a given domain. Decorate the method with `@transform()` and set the metadata attributes such as `label` and `icon`.
-
-```py
-@transform(label='To IP', icon='building-broadcast-tower')
-def transform_to_ip(self, node, **kwargs):
-    blueprint = IPAddressPlugin.blueprint(
-        ip_address=socket.gethostbyname(node['data'][0])
-    )
-    return blueprint
-```
-## Using the new plugin
-
-To use the new plugin, simply add it to the existing OSINTBuddy plugins folder inside the application, in development mode it will be detected automatically and loaded by the platform. Once added, you can access your 'Website' plugin and use the 'To IP' transformation.
-
-Creating a custom plugin for OSINTBuddy is an easy and effective way to enhance the capabilities of the tool, allowing you to fetch information from additional sources or transform the data in new ways. By following this guide and using the provided code example as a reference, you'll be able to create your own unique plugins to extend the functionality of OSINTBuddy to fit your specific needs.
-
-
-### Full example
-
-```py
-import socket
-import osintbuddy as ob
-
-class WebsitePlugin(ob.Plugin):
-    label = 'Website'
-    name = 'Website'
-    color = '#1D1DB8'
-    icon = 'world-www'
-    node = [
-        ob.elements.TextInput(label='Domain', icon='world-www'),
+        Title(label="Result"),
+        CopyText(label="URL"),
+        CopyText(label="Cache URL"),
     ]
 
-    @ob.transform(label='To IP', icon='building-broadcast-tower')
-    async def transform_to_ip(self, node, **kwargs):
-        blueprint = IPAddressPlugin.blueprint(
-            ip_address=socket.gethostbyname(node['data'][0])
-        )
-        return blueprint
+
+class CSESearchPlugin(Plugin):
+    label = "CSE Search"
+    name = "CSE search"
+    color = "#2C7237"
+    node = [
+        [
+            TextInput(label="Query", icon="search"),
+            TextInput(label="Pages", icon="123", default="1"),
+        ],
+        DropdownInput(label="CSE Categories", options=cse_link_options)
+    ]
+
+    @transform(label="To cse results", icon="search")
+    async def transform_to_cse_results(
+      self,
+      node: BaseModel,  # dynamically generated pydantic model 
+      # that is mapped from the above labels contained within `node`
+      use  # a pydantic model allowing you to access a selenium instance
+      # (and eventually a gremlin graph and settings api) 
+    ):
+        results = []
+
+        if not node.query:
+          raise OBPluginError((
+            'You can send error messages to the user here'
+            'if they forget to submit data or if some other error occurs'
+          ))
+
+        # notice how you can access data returned from the context menu
+        # of this node; using the label name in snake case
+        print(node.cse_categories, node.query, node.pages) 
+
+        ... # (removed code for clarity)
+
+        if resp:
+            for result in resp["results"]:
+                url = result.get("breadcrumbUrl", {})
+                # some elements you can store more than just a string,
+                # (these elements storing dicts are mapped 
+                # to janusgraph as properties with the names
+                # result_title, result_subtitle, and result_text)
+                blueprint = CSESearchResults.blueprint(
+                    result={
+                        "title": result.get("titleNoFormatting"),
+                        "subtitle": url.get("host") + url.get("crumbs"),
+                        "text": result.get("contentNoFormatting"),
+                    },
+                    url=result.get("unescapedUrl"),
+                    cache_url=result.get("cacheUrl"),
+                )
+                results.append(blueprint)
+        # here we return a list of blueprints (blueprints are dicts)
+        # but you can also return a single blueprint without a list
+        return results
+
 ```
+
 
