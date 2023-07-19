@@ -31,7 +31,13 @@ class OBRegistry(type):
         if name != 'OBPlugin' and name != 'Plugin' and issubclass(cls, OBPlugin):
             label = cls.label.strip()
             if cls.show_label is True:
-                OBRegistry.ui_labels.append(label)
+                if isinstance(cls.author, list):
+                    cls.author = ', '.join(cls.author)
+                OBRegistry.ui_labels.append({
+                    'label': label,
+                    'description': cls.description,
+                    'author': cls.author
+                })
             else:
                 OBRegistry.ui_labels.append(None)
             OBRegistry.labels.append(label)
@@ -81,7 +87,7 @@ def discover_plugins(
     return OBRegistry.plugins
 
 
-def transform(label, icon='list', prompt=None, edge_label='transformed_to'):
+def transform(label, icon='list', edge_label='transformed_to'):
     """
     A decorator add transforms to an osintbuddy plugin.
 
@@ -96,15 +102,12 @@ def transform(label, icon='list', prompt=None, edge_label='transformed_to'):
         displayed by the transform label. Default is "list".
     :return: A decorator for the plugin transform method.
     """
-    def decorator_transform(func):
+    def decorator_transform(func, edge_label=edge_label):
         async def wrapper(self, node, **kwargs):
             return await func(self=self, node=node, **kwargs)
         wrapper.label = label
         wrapper.icon = icon
         wrapper.edge_label = edge_label
-        if prompt is not None:
-            wrapper.prompt = prompt
-
         return wrapper
     return decorator_transform
 
@@ -121,13 +124,19 @@ class OBPlugin(object, metaclass=OBRegistry):
     show_label = True
     style: dict = {}
 
+    author = 'Unknown'
+    description = 'No description.'
+
     def __init__(self):
         transforms = self.__class__.__dict__.values()
         self.transforms = {
             to_snake_case(func.label): func for func in transforms if hasattr(func, 'label')
         }
         self.transform_labels = [
-            {'label': func.label, 'icon': func.icon} for func in transforms
+            {
+                'label': func.label,
+                'icon': func.icon,
+            } for func in transforms
             if hasattr(func, 'icon') and hasattr(func, 'label')
         ]
 
