@@ -1,21 +1,18 @@
-import os
-import importlib
+import os, imp, importlib, sys
 from typing import List, Any, Callable
 from collections import defaultdict
 from pydantic import create_model, BaseModel
-import undetected_chromedriver as uc
 # from osintbuddy.utils import slugify
 from osintbuddy.elements.base import BaseElement
 from osintbuddy.errors import OBPluginError
 from osintbuddy.utils import to_snake_case
 
-def driver() -> uc.Chrome:
-    pass
 
 # @todo add permission system and display what parts of system plugin can access
 class OBAuthorUse(BaseModel):
-    get_driver: Callable[[], uc.Chrome]
-    get_graph: Callable[[], None]  # @todo
+    # @todo
+    get_driver: Callable[[], None]
+    get_graph: Callable[[], None] 
 
 
 class OBRegistry(type):
@@ -57,8 +54,54 @@ class OBRegistry(type):
                 return cls.plugins[idx]
         return None
 
+    @classmethod
+    def get_plug(cls, plugin_label: str):
+        """
+        Returns the corresponding plugin class for a given plugin_label or
+        'None' if not found.
+
+        :param plugin_label: The label of the plugin to be returned.
+        :return: The plugin class or None if not found.
+        """
+        for idx, label in enumerate(cls.labels):
+            if to_snake_case(label) == to_snake_case(plugin_label):
+                return cls.plugins[idx]
+        return None
+
     def __getitem__(self, i):
-        return self.get_plugin[i]
+        return self.get_plug[i]
+
+# https://stackoverflow.com/a/7548190
+def load_plugin(
+    mod_name: str,
+    plugin_code: str,
+):
+    """
+    Load plugins from a string of code
+
+    :param module_name: The desired module name of the plugin.
+    :param plugin_code: The code of the plugin.
+    :return:
+    """
+    new_mod = imp.new_module(mod_name)
+    exec(plugin_code, new_mod.__dict__)
+    return OBRegistry.plugins
+
+
+def load_plugins(
+    entities: list
+):
+    """
+    Loads plugins from the osintbuddy db
+
+    :param entities: list of entities from the db
+    :return:
+    """
+    for entity in entities:
+        mod_name = to_snake_case(entity.label)
+        new_mod = imp.new_module(mod_name)
+        exec(entity.source, new_mod.__dict__)
+    return OBRegistry.plugins
 
 
 def discover_plugins(

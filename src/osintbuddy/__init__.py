@@ -8,7 +8,9 @@ from osintbuddy.plugins import (
     OBPlugin as Plugin,
     OBAuthorUse as PluginUse,
     discover_plugins,
-    transform
+    transform,
+    load_plugin,
+    load_plugins
 )
 
 __version__ = "0.0.4"
