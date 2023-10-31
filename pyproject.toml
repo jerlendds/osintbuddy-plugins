@@ -18,52 +18,55 @@ classifiers = [
 requires-python = ">=3.11"
 dynamic = ["version"]
 dependencies = [
-  "playwright>=1.39.0",
-  "httpx>=0.25.0",
-  "beautifulsoup4==4.12.2",
-  "pyfiglet==0.8.post1",
-  "termcolor==2.3.0",
-  "fastapi==0.103.2",
-  "uvicorn==0.22.0",
-  "uvloop==0.17.0",
-  "pydantic==2.4.2",
-  "pydantic-settings==2.0.3",
-  "yq==3.2.3",
-  "jedi-language-server==0.41.1",
-  "websockets==11.0.3"
+    "selenium>=4.9.0",
+    "sqlalchemy-json==0.7.0",
+    "SQLAlchemy-Utils==0.41.1",
+    "playwright>=1.39.0",
+    "httpx>=0.25.0",
+    "beautifulsoup4==4.12.2",
+    "pyfiglet==0.8.post1",
+    "termcolor==2.3.0",
+    "fastapi==0.103.2",
+    "uvicorn==0.22.0",
+    "uvloop==0.17.0",
+    "pydantic==2.4.2",
+    "pydantic-settings==2.0.3",
+    "yq==3.2.3",
+    "jedi-language-server==0.41.1",
+    "websockets==11.0.3"
 ]
 [project.optional-dependencies]
 test = [
-  "astroid==2.15.4",
-  "colorama==0.4.6",
-  "dill==0.3.6",
-  "eradicate==2.2.0",
-  "exceptiongroup==1.1.1",
-  "iniconfig==2.0.0",
-  "isort==5.12.0",
-  "lazy-object-proxy==1.9.0",
-  "mando==0.7.1",
-  "mccabe==0.7.0",
-  "mypy==1.3.0",
-  "mypy-extensions==1.0.0",
-  "packaging==23.1",
-  "platformdirs==3.5.1",
-  "pluggy==1.0.0",
-  "pycodestyle==2.10.0",
-  "pydocstyle==6.3.0",
-  "pyflakes==3.0.1",
-  "pylama==8.4.1",
-  "pylint==2.17.4",
-  "pytest==7.3.1",
-  "radon==6.0.1",
-  "six==1.16.0",
-  "snowballstemmer==2.2.0",
-  "toml==0.10.2",
-  "tomli==2.0.1",
-  "tomlkit==0.11.8",
-  "typing-extensions==4.5.0",
-  "vulture==2.7",
-  "wrapt==1.15.0",
+    "astroid==2.15.4",
+    "colorama==0.4.6",
+    "dill==0.3.6",
+    "eradicate==2.2.0",
+    "exceptiongroup==1.1.1",
+    "iniconfig==2.0.0",
+    "isort==5.12.0",
+    "lazy-object-proxy==1.9.0",
+    "mando==0.7.1",
+    "mccabe==0.7.0",
+    "mypy==1.3.0",
+    "mypy-extensions==1.0.0",
+    "packaging==23.1",
+    "platformdirs==3.5.1",
+    "pluggy==1.0.0",
+    "pycodestyle==2.10.0",
+    "pydocstyle==6.3.0",
+    "pyflakes==3.0.1",
+    "pylama==8.4.1",
+    "pylint==2.17.4",
+    "pytest==7.3.1",
+    "radon==6.0.1",
+    "six==1.16.0",
+    "snowballstemmer==2.2.0",
+    "toml==0.10.2",
+    "tomli==2.0.1",
+    "tomlkit==0.11.8",
+    "typing-extensions==4.5.0",
+    "vulture==2.7",
+    "wrapt==1.15.0",
 ]
 
 [project.urls]
@@ -127,13 +130,13 @@ pythonVersion = "3.7"
 pythonPlatform = "Linux"
 
 executionEnvironments = [
-  { root = "src" }
+    { root = "src" }
 ]
 
 [tool.pytest.ini_options]
 addopts = ""
 pythonpath = [
-  "src"
+    "src"
 ]
 testpaths = "tests"
 junit_family = "xunit2"
@@ -162,16 +165,16 @@ commands =
 [testenv:spark]
 extras = spark
 setenv =
-       PYSPARK_DRIVER_PYTHON = {envpython}
-       PYSPARK_PYTHON = {envpython}
+    PYSPARK_DRIVER_PYTHON = {envpython}
+    PYSPARK_PYTHON = {envpython}
 commands =
     pytest -m "spark" {posargs}
 
 [testenv:all]
 extras = all
 setenv =
-       PYSPARK_DRIVER_PYTHON = {envpython}
-       PYSPARK_PYTHON = {envpython}
+    PYSPARK_DRIVER_PYTHON = {envpython}
+    PYSPARK_PYTHON = {envpython}
 commands =
     pytest {posargs}
 """
