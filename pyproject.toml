@@ -5,7 +5,7 @@ build-backend = "flit.buildapi"
 [project]
 name =  "osintbuddy"
 authors = [
-    {name = "jerlendds", email = "theosintbuddyproject@openinfolabs.com"},
+    {name = "jerlendds", email = "support@forum.osintbuddy.com"},
 ]
 description = "OSINTBuddy - mine, merge, and map data for novel insights"
 readme = "README.md"
@@ -15,13 +15,22 @@ classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3.11"
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 dynamic = ["version"]
 dependencies = [
-  "selenium>=4.8.0",
-  "pydantic>=1.10.8",
-  "httpx>=0.23.0",
-  "SQLAlchemy>=2.0.12",
+  "playwright>=1.39.0",
+  "httpx>=0.25.0",
+  "beautifulsoup4==4.12.2",
+  "pyfiglet==0.8.post1",
+  "termcolor==2.3.0",
+  "fastapi==0.103.2",
+  "uvicorn==0.22.0",
+  "uvloop==0.17.0",
+  "pydantic==2.4.2",
+  "pydantic-settings==2.0.3",
+  "yq==3.2.3",
+  "jedi-language-server==0.41.1",
+  "websockets==11.0.3"
 ]
 [project.optional-dependencies]
 test = [
@@ -324,3 +333,11 @@ overgeneral-exceptions= [
     "BaseException",
     "Exception"
 ]
+[tool.hatch.build.targets.sdist.force-include]
+"bin/ob.py" = "osintbuddy/ob.py"
+
+[tool.hatch.build.targets.wheel.force-include]
+"bin/ob.py" = "osintbuddy/ob.py"
+
+[project.scripts]
+ob = "osintbuddy.ob:main"
