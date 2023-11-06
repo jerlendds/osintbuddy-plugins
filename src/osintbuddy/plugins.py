@@ -234,8 +234,6 @@ class OBPlugin(object, metaclass=OBRegistry):
             for the transform_type.
         """
         transform_type = to_snake_case(transform_type)
-        print('transform_type', transform_type)
-        print('transforms', self.transforms)
         if self.transforms and self.transforms[transform_type]:
             try:
                 transform = await self.transforms[transform_type](
