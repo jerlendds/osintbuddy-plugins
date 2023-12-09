@@ -6,7 +6,7 @@ from osintbuddy.elements import TextInput
 
 class {class_name}(ob.Plugin):
     label = '{label}'
-    icon = 'atom'   # https://tabler-icons.io/
+    icon = 'atom-2'   # https://tabler-icons.io/
     color = '#FFD166'
 
     author = '{author}'
@@ -16,7 +16,7 @@ class {class_name}(ob.Plugin):
         TextInput(label='Example', icon='radioactive')
     ]
 
-    @ob.transform(label='To example', icon='atom')
+    @ob.transform(label='To example', icon='atom-2')
     async def transform_example(self, node, use):
         WebsitePlugin = await ob.Registry.get_plugin('website')
         website_plugin = WebsitePlugin()

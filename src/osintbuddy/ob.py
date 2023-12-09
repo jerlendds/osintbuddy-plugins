@@ -64,9 +64,9 @@ def start_lsp():
 
 
 def start():
-    jedi_language_server = start_lsp()
+    # jedi_language_server = start_lsp()
     _print_server_details()
-    import signal
+    # import signal
     import uvicorn
     uvicorn.run(
         "osintbuddy.server:app",
@@ -79,11 +79,11 @@ def start():
         log_level='info'
     )
 
-    def signal_handler(sig, frame):
-        jedi_language_server.wait(timeout=1)
+    # def signal_handler(sig, frame):
+    #     jedi_language_server.wait(timeout=1)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.pause()
+    # signal.signal(signal.SIGINT, signal_handler)
+    # signal.pause()
 
 
 def create_plugin_wizard():

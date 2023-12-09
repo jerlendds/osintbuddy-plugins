@@ -1,4 +1,4 @@
-import os, imp, importlib
+import os, imp, importlib, inspect
 from typing import List, Any, Callable
 from collections import defaultdict
 from pydantic import BaseModel, ConfigDict
@@ -11,6 +11,20 @@ OBNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, ar
 
 class OBNode(BaseModel):
     model_config = OBNodeConfig
+
+
+def plugin_results_middleman(f):
+    def return_result(r):
+        return r
+    def yield_result(r):
+        for i in r:
+            yield i
+    def decorator(*a, **kwa):
+        if inspect.isgeneratorfunction(f):
+            return yield_result(f(*a, **kwa))
+        else:
+            return return_result(f(*a, **kwa))
+    return decorator
 
 
 class OBAuthorUse(BaseModel):
@@ -53,7 +67,7 @@ class OBRegistry(type):
         :return: The plugin class or None if not found.
         """
         for idx, label in enumerate(cls.labels):
-            if to_snake_case(label) == to_snake_case(plugin_label):
+            if label == plugin_label or to_snake_case(label) == to_snake_case(plugin_label):
                 return cls.plugins[idx]
         return None
 
@@ -71,7 +85,7 @@ class OBRegistry(type):
                 return cls.plugins[idx]
         return None
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: str):
         return self.get_plug[i]
 
 # https://stackoverflow.com/a/7548190
@@ -168,7 +182,6 @@ class OBPlugin(object, metaclass=OBRegistry):
     label: str = ''
     icon: str = 'atom-2'
     show_label = True
-    style: dict = {}
 
     author = 'Unknown'
     description = 'No description.'
@@ -212,7 +225,6 @@ class OBPlugin(object, metaclass=OBRegistry):
         node['label'] = cls.label
         node['color'] = cls.color if cls.color else '#145070'
         node['icon'] = cls.icon
-        node['style'] = cls.style
         node['elements'] = []
         for element in cls.node:
             if isinstance(element, list):
@@ -275,7 +287,6 @@ class OBPlugin(object, metaclass=OBRegistry):
     def _map_to_transform_data(cls, node: dict) -> OBNode:
         transform_map: dict = {}
         data: dict = node.get('data', {})
-        # model_label: str = data.get('label')
         elements: list[dict] = data.get('elements', [])
         for element in elements:
             if isinstance(element, list):
