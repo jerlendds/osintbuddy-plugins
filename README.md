@@ -3,7 +3,7 @@
 The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osintbuddy).
 
 
-![ob-demo 2023-07-14 20-51](https://github.com/jerlendds/osintbuddy/assets/29207058/b69e08f3-ac2a-4cef-9a85-713e7df6b12f)
+[2023-12-02_demo.webm](https://github.com/jerlendds/osintbuddy/assets/29207058/a7feba13-d1ca-43a0-ba25-b5c899eae89c)
 
 
 ***Please note:** [OSINTBuddy plugins](https://github.com/jerlendds/osintbuddy-plugins) are still in early alpha and breaking changes may occasionally occur in the API. That said, if you remain on the `main` branch and avoid accessing protected methods we will try our best to avoid introducing breaking changes.*
