@@ -19,19 +19,16 @@ class BaseElement(object):
     """
     def __init__(self, **kwargs):
         self.label: str = ''
-        self.style: dict = {}
         self.placeholder: str = ''
 
         for key, value in kwargs.items():
-            if key == 'label' or key == 'style' or key == 'placeholder':
+            if key == 'label' or key == 'placeholder':
                 setattr(self, key, value)
 
     def _base_blueprint(self):
         return {
             'type': self.node_type,
             'label': self.label,
-            'placeholder': self.placeholder,
-            'style': self.style
         }
 
 

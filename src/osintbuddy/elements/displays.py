@@ -21,7 +21,7 @@ class Title(BaseDisplay):
 class Text(BaseDisplay):
     node_type: str = 'section'
 
-    def __init__(self, value='', icon=None, **kwargs):
+    def __init__(self, value='', icon="123", **kwargs):
         super().__init__(**kwargs)
         self.value = value
         self.icon = icon
