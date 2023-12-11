@@ -1,18 +1,21 @@
-import os, imp, importlib, sys
+import os, imp, importlib
 from typing import List, Any, Callable
 from collections import defaultdict
-from pydantic import create_model, BaseModel
+from pydantic import BaseModel, ConfigDict
 # from osintbuddy.utils import slugify
 from osintbuddy.elements.base import BaseElement
 from osintbuddy.errors import OBPluginError
 from osintbuddy.utils import to_snake_case
 
 
-# @todo add permission system and display what parts of system plugin can access
+OBNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
+
+class OBNode(BaseModel):
+    model_config = OBNodeConfig
+
+
 class OBAuthorUse(BaseModel):
-    # @todo
     get_driver: Callable[[], None]
-    get_graph: Callable[[], None] 
 
 
 class OBRegistry(type):
@@ -300,5 +303,4 @@ class OBPlugin(object, metaclass=OBRegistry):
                 [cls._map_element(transform_map, elm) for elm in element]
             else:
                 cls._map_element(transform_map, element)
-        model = create_model(model_label, **transform_map)
-        return model()
+        return OBNode(**transform_map)

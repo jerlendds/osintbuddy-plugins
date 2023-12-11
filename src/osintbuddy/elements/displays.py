@@ -4,12 +4,10 @@ from osintbuddy.elements.base import BaseDisplay
 class Title(BaseDisplay):
     element_type: str = 'title'
 
-    def __init__(self, title='', subtitle='', text='', **kwargs):
+    def __init__(self, value='', **kwargs):
         super().__init__(**kwargs)
         self.element = {
-            "title": title,
-            "subtitle": subtitle,
-            "text": text
+            "value": value,
         }
 
     def to_dict(self):
