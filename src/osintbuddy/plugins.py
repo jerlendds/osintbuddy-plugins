@@ -160,12 +160,11 @@ class OBPlugin(object, metaclass=OBRegistry):
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    node: List[BaseElement]
+    entity: List[BaseElement]
     color: str = '#145070'
     label: str = ''
     icon: str = 'atom-2'
     show_label = True
-    style: dict = {}
 
     author = 'Unknown'
     description = 'No description.'
@@ -187,14 +186,16 @@ class OBPlugin(object, metaclass=OBRegistry):
         return self.blueprint()
 
     @staticmethod
-    def _map_graph_data_labels(element, kwargs):
+    def _map_graph_data_labels(element, **kwargs):
         label = to_snake_case(element['label'])
-        for passed_label in kwargs:
-            if passed_label == label:
-                if type(kwargs[label]) is str:
+        for element_key in kwargs.keys():
+            print('_map_graph_data_labels!!!!', element_key, label, element, kwargs)
+            if element_key == label:
+                if isinstance(kwargs[label], str):
                     element['value'] = kwargs[label]
-                elif type(kwargs[label]) is dict:
+                elif isinstance(kwargs[label], dict):
                     for t in kwargs[label]:
+                        print('for t in ', t, kwargs, label)
                         element[t] = kwargs[label][t]
         return element
 
@@ -205,24 +206,44 @@ class OBPlugin(object, metaclass=OBRegistry):
         Includes label, name, color, icon, and a list of all elements
         for the node/plugin.
         """
-        node = defaultdict(None)
-        node['label'] = cls.label
-        node['color'] = cls.color if cls.color else '#145070'
-        node['icon'] = cls.icon
-        node['style'] = cls.style
-        node['elements'] = []
-        for element in cls.node:
-            if isinstance(element, list):
-                node['elements'].append([
-                    cls._map_graph_data_labels(elm.json(), kwargs)
-                    for elm in element
-                ])
-            else:
-                element_row = cls._map_graph_data_labels(element.json(), kwargs)
-                node['elements'].append(element_row)
-        return node
+        entity_ui_node = defaultdict(None)
+        entity_ui_node['label'] = cls.label
+        entity_ui_node['color'] = cls.color if cls.color else '#145070'
+        entity_ui_node['icon'] = cls.icon
+        entity_ui_node['elements'] = []
+        if cls.entity:
+            for element in cls.entity:
+                # if an entity element is a nested list, 
+                # elements will be positioned next to each other horizontally
+                if isinstance(element, list):
+                    entity_ui_node['elements'].append([
+                        cls._map_graph_data_labels(elm.to_dict(), **kwargs)
+                        for elm in element
+                    ])
+                # otherwise position the entity elements vertically on the actual UI entity node
+                else:
+                    element_row = cls._map_graph_data_labels(element.to_dict(), **kwargs)
+                    entity_ui_node['elements'].append(element_row)
+            return entity_ui_node
+        if cls.node:
+            print("WARNING! Using node in plugins is being deprecated! Please switch to entity = [TextInput(...), ...] ")
+            for element in cls.node:
+                # if an entity element is a nested list, 
+                # elements will be positioned next to each other horizontally
+                if isinstance(element, list):
+                    row_elms = []
+                    for elm in element:
+                        print('elm', elm, elm.to_dict())
+                        row_elms.append(cls._map_graph_data_labels(elm.to_dict(), **kwargs))
+                    entity_ui_node['elements'].append(row_elms)
+                # otherwise position the entity elements vertically on the actual UI entity node
+                else:
+                    element_row = cls._map_graph_data_labels(element.to_dict(), **kwargs)
+                    entity_ui_node['elements'].append(element_row)
+            return entity_ui_node
 
-    async def get_transform(self, transform_type: str, node, use: OBAuthorUse) -> Any:
+
+    async def get_transform(self, transform_type: str, entity, use: OBAuthorUse) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return
@@ -231,13 +252,11 @@ class OBPlugin(object, metaclass=OBRegistry):
             for the transform_type.
         """
         transform_type = to_snake_case(transform_type)
-        print('transform_type', transform_type)
-        print('transforms', self.transforms)
         if self.transforms and self.transforms[transform_type]:
             try:
                 transform = await self.transforms[transform_type](
                     self=self,
-                    node=self._map_to_transform_data(node),
+                    node=self._map_to_transform_data(entity),
                     use=use
                 )
                 edge_label = self.transforms[transform_type].edge_label
@@ -259,13 +278,13 @@ class OBPlugin(object, metaclass=OBRegistry):
     def _map_element(transform_map: dict, element: dict):
         label = to_snake_case(element.pop('label', None))
         transform_map[label] = {}
-        type = element.pop('type', None)
+        element_type = element.pop('type', None)
         element.pop('icon', None)
         element.pop('placeholder', None)
         element.pop('style', None)
         element.pop('options', None)
         for k, v in element.items():
-            if (isinstance(v, str) and len(element.values()) == 1) or type == 'dropdown':
+            if (isinstance(v, str) and len(element.values()) == 1) or element_type == 'dropdown':
                 transform_map[label] = v
             else:
                 transform_map[label][k] = v

@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from typing import List
+from typing import List, Union
 from urllib import parse
 from pydantic import EmailStr
 
@@ -72,3 +72,13 @@ def to_snake_case(name):
     name = re.sub('__([A-Z])', r'_\1', name)
     name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name)
     return name.lower()
+
+
+# Convert all keys in dict to snake_case
+def dkeys_to_snake_case(data: dict) -> Union[dict, List[dict]]:
+    def to_snake(s):
+        return re.sub('([A-Z]\w+$)', '_\\1', s).lower()
+
+    if isinstance(data, list):
+        return [dkeys_to_snake_case(i) if isinstance(i, (dict, list)) else i for i in data]
+    return {to_snake(a):dkeys_to_snake_case(b) if isinstance(b, (dict, list)) else b for a, b in data.items()}

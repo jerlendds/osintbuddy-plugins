@@ -4,7 +4,7 @@ from osintbuddy.elements.base import BaseInput
 
 class UploadFileInput(BaseInput):
     """
-    The UploadFileInput class represents an upload file input node used
+    !!WORK_IN_PROGRESS!! The UploadFileInput class represents an upload file input node used
     in the OsintBuddy plugin system.
     value : Any
         The initial value for the input node.
@@ -17,20 +17,18 @@ class UploadFileInput(BaseInput):
     class Plugin(OBPlugin):
         node = [UploadFileInput(supported_files=['.pdf', '.docx'])]
     """
-    node_type: str = "upload"
+    element_type: str = "upload"
 
     def __init__(self, value="", supported_files=[], icon="IconFileUpload", **kwargs):
         super().__init__(**kwargs)
-        self.value: Any = value
-        self.icon: str = icon
-        self.supported_files: List[str] = supported_files
+        self.element = {
+            "value": value,
+            "icon": icon,
+            "supported_files": supported_files,
+        }
 
-    def json(self):
-        node = self._base_blueprint()
-        node["value"] = self.value
-        node["icon"] = self.icon
-        node["supported_files"] = self.supported_files
-        return node
+    def to_dict(self):
+        return self._base_entity_element(**self.element)
 
 
 class TextInput(BaseInput):
@@ -47,18 +45,16 @@ class TextInput(BaseInput):
     class Plugin(OBPlugin):
         node = [TextInput(label='Email search', placeholder='Enter email')]
     """
-    node_type: str = "text"
+    element_type: str = "text"
 
     def __init__(self, value="", default="", icon="IconAlphabetLatin", **kwargs):
         super().__init__(**kwargs)
-        self.value: str = value
-        self.icon: str = icon
-
-    def json(self):
-        node = self._base_blueprint()
-        node["value"] = self.value
-        node["icon"] = self.icon
-        return node
+        self.element = {
+            "value": value,
+            "icon": icon
+        }
+    def to_dict(self):
+        return self._base_entity_element(**self.element)
 
 
 class DropdownInput(BaseInput):
@@ -79,23 +75,24 @@ class DropdownInput(BaseInput):
             )
         ]
     """
-    node_type: str = "dropdown"
+    element_type: str = "dropdown"
 
     def __init__(self, options=[], value={'label': '', 'tooltip': '', 'value': ''}, **kwargs):
         super().__init__(**kwargs)
-        self.options: List[any] = options
-        self.value: dict = value
+        self.element = {
+            "options": options,
+            "value": value
+        }
 
-    def json(self):
-        node = self._base_blueprint()
-        node["options"] = self.options
-        node["value"] = self.value
-        return node
+    def to_dict(self):
+        print('DROPDOWN INPUT to_dict', self.element)
+        return self._base_entity_element(**self.element)
+
 
 
 class NumberInput(BaseInput):
     """
-    The NumberInput class represents a whole number input node used
+    !!WORK_IN_PROGRESS!! The NumberInput class represents a whole number input node used
     in the OsintBuddy plugin system.
 
     value : int
@@ -105,23 +102,22 @@ class NumberInput(BaseInput):
     class Plugin(OBPlugin):
         node = [NumberInput(value=10, placeholder='Enter a whole number')]
     """
-    node_type: str = "number"
+    element_type: str = "number"
 
     def __init__(self, value=1, icon="123", **kwargs):
         super().__init__(**kwargs)
-        self.value: int = value
-        self.icon = icon
+        self.element = {
+            "value": value,
+            "icon": icon
+        }
 
-    def json(self):
-        node = self._base_blueprint()
-        node["value"] = self.value
-        node["icon"] = self.icon
-        return node
+    def to_dict(self):
+        return self._base_entity_element(**self.element)
 
 
 class DecimalInput(BaseInput):
     """
-    The DecimalInput class represents a decimal number input node used
+    !!WORK_IN_PROGRESS!! The DecimalInput class represents a decimal number input node used
     in the OsintBuddy plugin system.
     value : float
         The float value stored in the node.
@@ -130,15 +126,15 @@ class DecimalInput(BaseInput):
     class Plugin(OBPlugin):
         node = [DecimalInput(value=3.14, placeholder='Enter a decimal number')]
     """
-    node_type: str = "decimal"
+    element_type: str = "decimal"
 
     def __init__(self, value=3.14, icon="123", **kwargs):
         super().__init__(**kwargs)
-        self.value: float = value
-        self.icon = icon
+        self.element = {
+            "value": value,
+            "icon": icon
+        }
 
-    def json(self):
-        node = self._base_blueprint()
-        node["value"] = self.value
-        node["icon"] = self.icon
-        return node
+    def to_dict(self):
+        return self._base_entity_element(**self.element)
+
