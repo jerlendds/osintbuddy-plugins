@@ -192,13 +192,11 @@ class OBPlugin(object, metaclass=OBRegistry):
     def _map_graph_data_labels(element, **kwargs):
         label = to_snake_case(element['label'])
         for element_key in kwargs.keys():
-            print('_map_graph_data_labels!!!!', element_key, label, element, kwargs)
             if element_key == label:
                 if isinstance(kwargs[label], str):
                     element['value'] = kwargs[label]
                 elif isinstance(kwargs[label], dict):
                     for t in kwargs[label]:
-                        print('for t in ', t, kwargs, label)
                         element[t] = kwargs[label][t]
         return element
 
@@ -236,7 +234,6 @@ class OBPlugin(object, metaclass=OBRegistry):
                 if isinstance(element, list):
                     row_elms = []
                     for elm in element:
-                        print('elm', elm, elm.to_dict())
                         row_elms.append(cls._map_graph_data_labels(elm.to_dict(), **kwargs))
                     entity_ui_node['elements'].append(row_elms)
                 # otherwise position the entity elements vertically on the actual UI entity node
