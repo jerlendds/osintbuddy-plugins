@@ -1,4 +1,4 @@
-import os, imp, importlib, inspect
+import os, imp, importlib, inspect, sys
 from typing import List, Any, Callable
 from collections import defaultdict
 from pydantic import BaseModel, ConfigDict
@@ -280,9 +280,10 @@ class OBPlugin(object, metaclass=OBRegistry):
                 ]
                 return transform
             except (Exception, OBPluginError) as e:
-                if isinstance(e, OBPluginError):
-                    raise OBPluginError(e)
-                raise OBPluginError(f'This plugin has run into an unhandled error: {e}')
+                raise e
+                # exc_type, exc_obj, exc_tb = sys.exc_info()
+                # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                # raise OBPluginError(f"Unhandled plugin error! {exc_type}\nPlease see {fname} on line no. {exc_tb.tb_lineno}\n{e}")
         return None
 
     @staticmethod

@@ -18,4 +18,5 @@ from osintbuddy.elements.inputs import (  # noqa
     DropdownInput,
     NumberInput,
     DecimalInput,
+    TextAreaInput
 )
