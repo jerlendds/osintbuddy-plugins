@@ -1,4 +1,5 @@
 import os, imp, importlib, inspect, sys
+from types import ModuleType
 from typing import List, Any, Callable
 from collections import defaultdict
 from pydantic import BaseModel, ConfigDict
@@ -27,11 +28,11 @@ def plugin_results_middleman(f):
     return decorator
 
 
-class OBAuthorUse(BaseModel):
+class TransformCtx(BaseModel):
     get_driver: Callable[[], None]
 
 
-class OBRegistry(type):
+class EntityRegistry(type):
     plugins = []
     labels = []
     ui_labels = []
@@ -41,18 +42,18 @@ class OBRegistry(type):
         Initializes the OBRegistry metaclass by adding the plugin class
         and its label if it is a valid plugin.
         """
-        if name != 'OBPlugin' and name != 'Plugin' and issubclass(cls, OBPlugin):
+        if name != 'EntityPlugin' and name != 'Plugin' and issubclass(cls, EntityPlugin):
             label = cls.label.strip()
             if cls.show_label is True:
                 if isinstance(cls.author, list):
                     cls.author = ', '.join(cls.author)
-                OBRegistry.ui_labels.append({
+                EntityRegistry.ui_labels.append({
                     'label': label,
                     'description': cls.description,
                     'author': cls.author
                 })
-            OBRegistry.labels.append(label)
-            OBRegistry.plugins.append(cls)
+            EntityRegistry.labels.append(label)
+            EntityRegistry.plugins.append(cls)
 
     @classmethod
     async def get_plugin(cls, plugin_label: str):
@@ -69,7 +70,7 @@ class OBRegistry(type):
         return None
 
     @classmethod
-    def get_plug(cls, plugin_label: str):
+    def get_plugin_sync(cls, plugin_label: str):
         """
         Returns the corresponding plugin class for a given plugin_label or
         'None' if not found.
@@ -83,11 +84,11 @@ class OBRegistry(type):
         return None
 
     def __getitem__(self, i: str):
-        return self.get_plug[i]
+        return self.sync_get_plugin[i]
 
 # https://stackoverflow.com/a/7548190
-def load_plugin(
-    mod_name: str,
+def load_local_plugin(
+    mod: ModuleType,
     plugin_code: str,
 ):
     """
@@ -97,13 +98,15 @@ def load_plugin(
     :param plugin_code: The code of the plugin.
     :return:
     """
-    new_mod = imp.new_module(mod_name)
-    exec(plugin_code, new_mod.__dict__)
-    return OBRegistry.plugins
+    try:
+        exec(plugin_code, mod.__dict__)
+    except Exception as e:
+        raise e
 
 
-def load_plugins(
-    entities: list
+def load_local_plugins(
+    entities: list,
+    mod_name: str = None
 ):
     """
     Loads plugins from the osintbuddy db
@@ -111,11 +114,13 @@ def load_plugins(
     :param entities: list of entities from the db
     :return:
     """
+    if mod_name is not None:
+        mod = imp.new_module(mod_name) 
     for entity in entities:
-        mod_name = to_snake_case(entity.label)
-        new_mod = imp.new_module(mod_name)
-        exec(entity.source, new_mod.__dict__)
-    return OBRegistry.plugins
+        if mod_name is None:
+            mod = imp.new_module(to_snake_case(entity.label))
+        load_local_plugin(mod, entity.source)
+
 
 
 def discover_plugins(
@@ -141,7 +146,7 @@ def discover_plugins(
                 except ImportError as e:
                     print(f"Error importing plugin '{modpath}{modname}': {e}")
 
-    return OBRegistry.plugins
+    return EntityRegistry.plugins
 
 
 def transform(label, icon='list', edge_label='transformed_to'):
@@ -161,7 +166,7 @@ def transform(label, icon='list', edge_label='transformed_to'):
     """
     def decorator_transform(func, edge_label=edge_label):
         async def wrapper(self, node, **kwargs):
-            return await func(self=self, node=node, **kwargs)
+            return await func(self, node, **kwargs)
         wrapper.label = label
         wrapper.icon = icon
         wrapper.edge_label = edge_label
@@ -169,7 +174,22 @@ def transform(label, icon='list', edge_label='transformed_to'):
     return decorator_transform
 
 
-class OBPlugin(object, metaclass=OBRegistry):
+def register_transform(entity_class, label, icon='list', edge_label='transformed_to'):
+    """
+    TODO: Document me
+    """
+    def decorator_transform(func, edge_label=edge_label):
+        async def wrapper(node, **kwargs):
+            return await func(node, **kwargs)
+        func.label = label
+        func.icon = icon
+        func.edge_label = edge_label
+        setattr(entity_class, func.__name__, func)
+        return wrapper
+    return decorator_transform
+
+
+class EntityPlugin(object, metaclass=EntityRegistry):
     """
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
@@ -228,10 +248,10 @@ class OBPlugin(object, metaclass=OBRegistry):
                 # if an entity element is a nested list, 
                 # elements will be positioned next to each other horizontally
                 if isinstance(element, list):
-                    entity_ui_node['elements'].append([
-                        cls._map_graph_data_labels(elm.to_dict(), **kwargs)
-                        for elm in element
-                    ])
+                    row_elms = []
+                    for elm in element:
+                        row_elms.append(cls._map_graph_data_labels(elm.to_dict(), **kwargs))
+                    entity_ui_node['elements'].append(row_elms)
                 # otherwise position the entity elements vertically on the actual UI entity node
                 else:
                     element_row = cls._map_graph_data_labels(element.to_dict(), **kwargs)
@@ -254,7 +274,7 @@ class OBPlugin(object, metaclass=OBRegistry):
             return entity_ui_node
 
 
-    async def get_transform(self, transform_type: str, entity, use: OBAuthorUse) -> Any:
+    async def get_transform(self, transform_type: str, entity, use: TransformCtx) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return

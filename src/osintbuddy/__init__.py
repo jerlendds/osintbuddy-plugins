@@ -4,13 +4,16 @@
 """Python Package Template"""
 from __future__ import annotations
 from osintbuddy.plugins import (
-    OBRegistry as Registry,
-    OBPlugin as Plugin,
-    OBAuthorUse as PluginUse,
+    EntityRegistry,
+    EntityPlugin,
+    EntityPlugin as Plugin,  # TODO: log warning on use and deprecate me
+    TransformCtx,
+    TransformCtx as PluginUse,  # TODO: log warning on use and deprecate me
     discover_plugins,
     transform,
-    load_plugin,
-    load_plugins
+    load_local_plugin,
+    load_local_plugins,
+    register_transform
 )
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
