@@ -5,6 +5,7 @@
 from __future__ import annotations
 from osintbuddy.plugins import (
     EntityRegistry,
+    EntityRegistry as Registry,
     EntityPlugin,
     EntityPlugin as Plugin,  # TODO: log warning on use and deprecate me
     TransformCtx,
