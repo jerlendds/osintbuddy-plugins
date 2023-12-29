@@ -97,8 +97,10 @@ def load_local_plugin(
     :param module_name: The desired module name of the plugin.
     :param plugin_code: The code of the plugin.
     :return:
-    """
+    """    
     try:
+        if isinstance(mod, str):
+            mod = imp.new_module(mod) 
         exec(plugin_code, mod.__dict__)
     except Exception as e:
         raise e
