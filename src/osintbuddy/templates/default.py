@@ -1,25 +1,24 @@
 def plugin_source_template(label: str, description: str, author: str) -> str:
     class_name = ''.join(x for x in filter(str.isalnum, label.title()) if not x.isspace())
 
-    return f"""import osintbuddy as ob
+    return f'''from osintbuddy import DiscoverableEntity, transform
 from osintbuddy.elements import TextInput
 
 class {class_name}(ob.DiscoverableEntity):
-    label = '{label}'
-    icon = 'atom-2'   # https://tabler-icons.io/
-    color = '#FFD166'
+    label = "{label}"
+    icon = "face-id"   # https://tabler-icons.io/
+    color = "#08ba73cc"
 
-    author = '{author}'
-    description = '{description}'
-
-    node = [
-        TextInput(label='Example', icon='radioactive')
+    properties = [
+        TextInput(label='Example', icon='command')
     ]
 
-    @ob.transform(label='To example', icon='atom-2')
+    author = "{author}"
+    description = "{description}"
+
+    @transform(label="To Website Example", icon="transform")
     async def transform_example(self, node, use):
-        WebsitePlugin = await ob.Registry.get_plugin('website')
-        website_plugin = WebsitePlugin()
-        return website_plugin.blueprint(domain=node.example)
-"""
+        website_entity = await ob.Registry.get_plugin('website')
+        return website_entity.create(domain=node.example)
+'''
 
