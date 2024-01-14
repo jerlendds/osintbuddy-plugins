@@ -4,7 +4,7 @@ def plugin_source_template(label: str, description: str, author: str) -> str:
     return f"""import osintbuddy as ob
 from osintbuddy.elements import TextInput
 
-class {class_name}(ob.Plugin):
+class {class_name}(ob.DiscoverableEntity):
     label = '{label}'
     icon = 'atom-2'   # https://tabler-icons.io/
     color = '#FFD166'

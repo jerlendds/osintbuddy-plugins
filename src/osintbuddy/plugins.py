@@ -8,10 +8,11 @@ from osintbuddy.errors import OBPluginError
 from osintbuddy.utils import to_snake_case
 
 
-OBNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
+IcgNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
 
-class OBNode(BaseModel):
-    model_config = OBNodeConfig
+class EntityProperties(BaseModel):
+    entity_context_label: str
+    model_config = IcgNodeConfig
 
 
 def plugin_results_middleman(f):
@@ -31,29 +32,46 @@ def plugin_results_middleman(f):
 class TransformCtx(BaseModel):
     get_driver: Callable[[], None]
 
+# https://stackoverflow.com/a/7548190
+def load_plugin_source(
+    mod: ModuleType,
+    plugin_code: str,
+) -> ModuleType:
+    """
+    Load plugins from a string of code
+
+    :param module_name: The desired module name of the plugin.
+    :param plugin_code: The code of the plugin.
+    :return:
+    """    
+    if isinstance(mod, str):
+        mod = imp.new_module(mod)
+    exec(plugin_code, mod.__dict__)
+    return mod
+
 
 class EntityRegistry(type):
-    plugins = []
-    labels = []
-    ui_labels = []
+    entities = []
+    _labels = []
+    _visible_entities = []
 
     def __init__(cls, name, bases, attrs):
         """
         Initializes the OBRegistry metaclass by adding the plugin class
         and its label if it is a valid plugin.
         """
-        if name != 'EntityPlugin' and name != 'Plugin' and issubclass(cls, EntityPlugin):
+        if name != 'DiscoverableEntity' and issubclass(cls, DiscoverableEntity):
             label = cls.label.strip()
+            if isinstance(cls.author, list):
+                cls.author = ', '.join(cls.author)
             if cls.show_label is True:
-                if isinstance(cls.author, list):
-                    cls.author = ', '.join(cls.author)
-                EntityRegistry.ui_labels.append({
+                EntityRegistry._visible_entities.append({
                     'label': label,
                     'description': cls.description,
                     'author': cls.author
                 })
-            EntityRegistry.labels.append(label)
-            EntityRegistry.plugins.append(cls)
+            EntityRegistry._labels.append(label)
+            EntityRegistry.entities.append(cls)
 
     @classmethod
     async def get_plugin(cls, plugin_label: str):
@@ -64,13 +82,12 @@ class EntityRegistry(type):
         :param plugin_label: The label of the plugin to be returned.
         :return: The plugin class or None if not found.
         """
-        for idx, label in enumerate(cls.labels):
-            if label == plugin_label or to_snake_case(label) == to_snake_case(plugin_label):
-                return cls.plugins[idx]
-        return None
+        for entity in cls.entities:
+            if entity.label == plugin_label or to_snake_case(entity.label) == to_snake_case(plugin_label):
+                return entity
 
     @classmethod
-    def get_plugin_sync(cls, plugin_label: str):
+    def _get_plugin(cls, plugin_label: str):
         """
         Returns the corresponding plugin class for a given plugin_label or
         'None' if not found.
@@ -78,80 +95,59 @@ class EntityRegistry(type):
         :param plugin_label: The label of the plugin to be returned.
         :return: The plugin class or None if not found.
         """
-        for idx, label in enumerate(cls.labels):
-            if to_snake_case(label) == to_snake_case(plugin_label):
-                return cls.plugins[idx]
-        return None
+        for entity in cls.entities:
+            if entity.label == plugin_label or to_snake_case(entity.label) == to_snake_case(plugin_label):
+                return entity
 
     def __getitem__(self, i: str):
-        return self.sync_get_plugin[i]
+        return self._get_plugin[i]
 
-# https://stackoverflow.com/a/7548190
-def load_local_plugin(
-    mod: ModuleType,
-    plugin_code: str,
-):
-    """
-    Load plugins from a string of code
+    @staticmethod
+    def load_db_plugins(
+        entities: list,
+        mod_name: str = None
+    ):
+        """
+        Loads plugins from the osintbuddy db
 
-    :param module_name: The desired module name of the plugin.
-    :param plugin_code: The code of the plugin.
-    :return:
-    """    
-    try:
-        if isinstance(mod, str):
-            mod = imp.new_module(mod) 
-        exec(plugin_code, mod.__dict__)
-    except Exception as e:
-        raise e
+        :param entities: list of entities from the db
+        :return:
+        """
+        if mod_name is not None:
+            mod = imp.new_module(mod_name) 
+        for entity in entities:
+            if mod_name is None:
+                mod = imp.new_module(to_snake_case(entity.label))
+            load_plugin_source(mod, entity.source)
 
+    @staticmethod
+    def discover_plugins(
+        dir_path: str = '/plugins.osintbuddy.com/src/osintbuddy/core/',
+    ):
+        """
+        Scans the specified 'dir_path' for '.py' files, imports them as plugins,
+        and populates the OBRegistry with classes.
 
-def load_local_plugins(
-    entities: list,
-    mod_name: str = None
-):
-    """
-    Loads plugins from the osintbuddy db
+        :param dir_path: The directory path where the plugins are located.
+        :return: List of plugin classes
+        """
+        for r, _, files in os.walk(dir_path):
+            for filename in files:
+                modname, ext = os.path.splitext(filename)
+                if ext == '.py':
+                    try:
+                        modpath = r.replace("/app/", "")
+                        if 'osintbuddy/core' in dir_path:
+                            modpath = r.replace("/plugins.osintbuddy.com/src/", "")
+                        modpath = modpath.replace("/", ".")
+                        importlib.import_module(f'{modpath}{modname}')
+                    except ImportError as e:
+                        print(f"Error importing plugin '{modpath}{modname}': {e}")
 
-    :param entities: list of entities from the db
-    :return:
-    """
-    if mod_name is not None:
-        mod = imp.new_module(mod_name) 
-    for entity in entities:
-        if mod_name is None:
-            mod = imp.new_module(to_snake_case(entity.label))
-        load_local_plugin(mod, entity.source)
-
-
-
-def discover_plugins(
-    dir_path: str = '/plugins.osintbuddy.com/src/osintbuddy/core/',
-):
-    """
-    Scans the specified 'dir_path' for '.py' files, imports them as plugins,
-    and populates the OBRegistry with classes.
-
-    :param dir_path: The directory path where the plugins are located.
-    :return: List of plugin classes
-    """
-    for r, _, files in os.walk(dir_path):
-        for filename in files:
-            modname, ext = os.path.splitext(filename)
-            if ext == '.py':
-                try:
-                    modpath = r.replace("/app/", "")
-                    if 'osintbuddy/core' in dir_path:
-                        modpath = r.replace("/plugins.osintbuddy.com/src/", "")
-                    modpath = modpath.replace("/", ".")
-                    importlib.import_module(f'{modpath}{modname}')
-                except ImportError as e:
-                    print(f"Error importing plugin '{modpath}{modname}': {e}")
-
-    return EntityRegistry.plugins
+        return EntityRegistry.entities
 
 
-def transform(label, icon='list', edge_label='transformed_to'):
+def transform(label, icon='transform', edge_label='has_result'):
     """
     A decorator add transforms to an osintbuddy plugin.
 
@@ -176,7 +172,7 @@ def transform(label, icon='list', edge_label='transformed_to'):
     return decorator_transform
 
 
-def register_transform(entity_class, label, icon='list', edge_label='transformed_to'):
+def register_transform(entity_class, label, icon='transform', edge_label='has_result'):
     """
     TODO: Document me
     """
@@ -191,15 +187,15 @@ def register_transform(entity_class, label, icon='list', edge_label='transformed
     return decorator_transform
 
 
-class EntityPlugin(object, metaclass=EntityRegistry):
+class DiscoverableEntity(object, metaclass=EntityRegistry):
     """
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    entity: List[BaseElement]
+    properties: List[BaseElement] = []
     color: str = '#145070'
     label: str = ''
-    icon: str = 'atom-2'
+    icon: str = 'transform'
     show_label = True
 
     author = 'Unknown'
@@ -218,65 +214,53 @@ class EntityPlugin(object, metaclass=EntityRegistry):
             if hasattr(func, 'icon') and hasattr(func, 'label')
         ]
 
-    def __call__(self):
-        return self.blueprint()
+    def __call__(self, **kwargs):
+        return self.create(**kwargs)
 
     @staticmethod
-    def _map_graph_data_labels(element, **kwargs):
+    def _build_entity_properties(element, **properties):
         label = to_snake_case(element['label'])
-        for element_key in kwargs.keys():
+        for element_key in properties.keys():
             if element_key == label:
-                if isinstance(kwargs[label], str):
-                    element['value'] = kwargs[label]
-                elif isinstance(kwargs[label], dict):
-                    for t in kwargs[label]:
-                        element[t] = kwargs[label][t]
+                if isinstance(properties[label], str):
+                    element['value'] = properties[label]
+                elif isinstance(properties[label], dict):
+                    for t in properties[label]:
+                        element[t] = properties[label][t]
         return element
 
     @classmethod
-    def blueprint(cls, **kwargs):
+    def create(cls, **data_properties):
         """
-        Generate and return a dictionary representing the plugins node.
-        Includes label, name, color, icon, and a list of all elements
-        for the node/plugin.
+        Generate and return a dictionary representing the entity as seen on the ui.
         """
-        entity_ui_node = defaultdict(None)
-        entity_ui_node['label'] = cls.label
-        entity_ui_node['color'] = cls.color if cls.color else '#145070'
-        entity_ui_node['icon'] = cls.icon
-        entity_ui_node['elements'] = []
-        if cls.entity:
-            for element in cls.entity:
-                # if an entity element is a nested list, 
-                # elements will be positioned next to each other horizontally
-                if isinstance(element, list):
-                    row_elms = []
-                    for elm in element:
-                        row_elms.append(cls._map_graph_data_labels(elm.to_dict(), **kwargs))
-                    entity_ui_node['elements'].append(row_elms)
-                # otherwise position the entity elements vertically on the actual UI entity node
-                else:
-                    element_row = cls._map_graph_data_labels(element.to_dict(), **kwargs)
-                    entity_ui_node['elements'].append(element_row)
-            return entity_ui_node
-        if cls.node:
-            print("WARNING! Using node in plugins is being deprecated! Please switch to entity = [TextInput(...), ...] ")
-            for element in cls.node:
-                # if an entity element is a nested list, 
-                # elements will be positioned next to each other horizontally
-                if isinstance(element, list):
-                    row_elms = []
-                    for elm in element:
-                        row_elms.append(cls._map_graph_data_labels(elm.to_dict(), **kwargs))
-                    entity_ui_node['elements'].append(row_elms)
-                # otherwise position the entity elements vertically on the actual UI entity node
-                else:
-                    element_row = cls._map_graph_data_labels(element.to_dict(), **kwargs)
-                    entity_ui_node['elements'].append(element_row)
-            return entity_ui_node
+        if not cls.properties:
+            raise NotImplementedError((
+                "No entity_properties found."
+                "Entity properties must exist for a DiscoverableEntity"
+            ))
+        node = defaultdict(None)
+        node['label'] = cls.label
+        node['color'] = cls.color if cls.color else '#145070'
+        node['icon'] = cls.icon
+        node['elements'] = []
+        for element in cls.properties:
+            # if an entity element is a nested list, 
+            # elements will be positioned next to each other horizontally
+            if isinstance(element, list):
+                row_elms = []
+                for elm in element:
+                    row_elms.append(cls._build_entity_properties(elm.to_dict(), **data_properties))
+                node['elements'].append(row_elms)
+            # otherwise position the entity elements vertically on the actual UI entity 
+            # (elements aka properties can be viewed after double clicking an entity on the graph UI,
+            # this toggles that entity into edit mode displaying these elements we are building here)
+            else:
+                element_row = cls._build_entity_properties(element.to_dict(), **data_properties)
+                node['elements'].append(element_row)
+        return node
 
-
-    async def get_transform(self, transform_type: str, entity, use: TransformCtx) -> Any:
+    async def run_transform(self, transform_type: str, entity_transform_context, use: TransformCtx) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return
@@ -285,27 +269,21 @@ class EntityPlugin(object, metaclass=EntityRegistry):
             for the transform_type.
         """
         transform_type = to_snake_case(transform_type)
-        if self.transforms and self.transforms[transform_type]:
-            try:
-                transform = await self.transforms[transform_type](
-                    self=self,
-                    node=self._map_to_transform_data(entity),
-                    use=use
-                )
-                edge_label = self.transforms[transform_type].edge_label
-                if not isinstance(transform, list):
-                    transform['edge_label'] = edge_label
-                    return [transform]
-                [
-                    n.__setitem__('edge_label', edge_label)
-                    for n in transform
-                ]
-                return transform
-            except (Exception, OBPluginError) as e:
-                raise e
-                # exc_type, exc_obj, exc_tb = sys.exc_info()
-                # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                # raise OBPluginError(f"Unhandled plugin error! {exc_type}\nPlease see {fname} on line no. {exc_tb.tb_lineno}\n{e}")
+        if transform_func := self.transforms.get(transform_type):
+            transform = await transform_func(
+                self=self,
+                context=self._map_to_transform_context(entity_transform_context),
+                use=use
+            )
+            edge_label = transform_func.edge_label
+            if not isinstance(transform, list):
+                transform['edge_label'] = edge_label
+                return [transform]
+            [
+                n.__setitem__('edge_label', edge_label)
+                for n in transform
+            ]
+            return transform
         return None
 
     @staticmethod
@@ -315,7 +293,6 @@ class EntityPlugin(object, metaclass=EntityRegistry):
         element_type = element.pop('type', None)
         element.pop('icon', None)
         element.pop('placeholder', None)
-        element.pop('style', None)
         element.pop('options', None)
         for k, v in element.items():
             if (isinstance(v, str) and len(element.values()) == 1) or element_type == 'dropdown':
@@ -324,13 +301,14 @@ class EntityPlugin(object, metaclass=EntityRegistry):
                 transform_map[label][k] = v
 
     @classmethod
-    def _map_to_transform_data(cls, node: dict) -> OBNode:
+    def _map_to_transform_context(cls, entity: dict) -> EntityProperties:
         transform_map: dict = {}
-        data: dict = node.get('data', {})
+        data: dict = entity.get('data', {})
+        entity_type = entity.get('type') 
         elements: list[dict] = data.get('elements', [])
         for element in elements:
             if isinstance(element, list):
                 [cls._map_element(transform_map, elm) for elm in element]
             else:
                 cls._map_element(transform_map, element)
-        return OBNode(**transform_map)
+        return EntityProperties(entity_context_label=entity_type, **transform_map)

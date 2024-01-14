@@ -5,16 +5,11 @@
 from __future__ import annotations
 from osintbuddy.plugins import (
     EntityRegistry,
-    EntityRegistry as Registry,
-    EntityPlugin,
-    EntityPlugin as Plugin,  # TODO: log warning on use and deprecate me
+    DiscoverableEntity,
     TransformCtx,
-    TransformCtx as PluginUse,  # TODO: log warning on use and deprecate me
-    discover_plugins,
     transform,
-    load_local_plugin,
-    load_local_plugins,
-    register_transform
+    register_transform,
+    load_plugin_source
 )
 
 __version__ = "0.0.5"

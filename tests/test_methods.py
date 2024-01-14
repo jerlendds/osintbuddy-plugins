@@ -9,4 +9,4 @@ from osintbuddy.node import TextInput
 
 # Mock
 def test_ob_registry():
-    assert OBRegistry.plugins == []
+    assert OBRegistry.entities == []
