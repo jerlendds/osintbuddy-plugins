@@ -11,7 +11,7 @@ from osintbuddy.utils import to_snake_case
 IcgNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
 
 class EntityProperties(BaseModel):
-    entity_context_label: str
+    source_entity: str
     model_config = IcgNodeConfig
 
 
@@ -29,7 +29,7 @@ def plugin_results_middleman(f):
     return decorator
 
 
-class TransformCtx(BaseModel):
+class TransformUse(BaseModel):
     get_driver: Callable[[], None]
 
 # https://stackoverflow.com/a/7548190
@@ -163,8 +163,8 @@ def transform(label, icon='transform', edge_label='has_result'):
     :return: A decorator for the plugin transform method.
     """
     def decorator_transform(func, edge_label=edge_label):
-        async def wrapper(self, node, **kwargs):
-            return await func(self, node, **kwargs)
+        async def wrapper(self, context, **kwargs):
+            return await func(self, context, **kwargs)
         wrapper.label = label
         wrapper.icon = icon
         wrapper.edge_label = edge_label
@@ -260,7 +260,7 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
                 node['elements'].append(element_row)
         return node
 
-    async def run_transform(self, transform_type: str, entity_transform_context, use: TransformCtx) -> Any:
+    async def run_transform(self, transform_type: str, transform_context: dict, use: TransformUse) -> Any:
         """ Return output from a function accepting node data.
             The function will be called with a single argument, the node data
             from when a node context menu action is taken - and should return
@@ -272,7 +272,7 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
         if transform_func := self.transforms.get(transform_type):
             transform = await transform_func(
                 self=self,
-                context=self._map_to_transform_context(entity_transform_context),
+                context=self._map_to_transform_context(transform_context),
                 use=use
             )
             edge_label = transform_func.edge_label
@@ -301,14 +301,14 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
                 transform_map[label][k] = v
 
     @classmethod
-    def _map_to_transform_context(cls, entity: dict) -> EntityProperties:
+    def _map_to_transform_context(cls, entity_context: dict) -> EntityProperties:
         transform_map: dict = {}
-        data: dict = entity.get('data', {})
-        entity_type = entity.get('type') 
+        data: dict = entity_context.get('data', {})
+        entity_type = entity_context.get("data", {}).get("label")
         elements: list[dict] = data.get('elements', [])
         for element in elements:
             if isinstance(element, list):
                 [cls._map_element(transform_map, elm) for elm in element]
             else:
                 cls._map_element(transform_map, element)
-        return EntityProperties(entity_context_label=entity_type, **transform_map)
+        return EntityProperties(source_entity=entity_type, **transform_map)

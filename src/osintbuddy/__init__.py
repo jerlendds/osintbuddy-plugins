@@ -6,7 +6,7 @@ from __future__ import annotations
 from osintbuddy.plugins import (
     EntityRegistry,
     DiscoverableEntity,
-    TransformCtx,
+    TransformUse,
     transform,
     register_transform,
     load_plugin_source
