@@ -177,8 +177,8 @@ def register_transform(entity_class, label, icon='transform', edge_label='has_re
     TODO: Document me
     """
     def decorator_transform(func, edge_label=edge_label):
-        async def wrapper(node, **kwargs):
-            return await func(node, **kwargs)
+        async def wrapper(context, **kwargs):
+            return await func(context, **kwargs)
         func.label = label
         func.icon = icon
         func.edge_label = edge_label
