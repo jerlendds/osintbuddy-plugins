@@ -9,7 +9,6 @@ from osintbuddy.plugins import (
     TransformUse,
     transform,
     register_transform,
-    load_plugin_source
+    load_plugin_source,
 )
-
 __version__ = "0.0.5"

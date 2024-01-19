@@ -3,8 +3,8 @@
 #   Licensed under the MIT License. See LICENSE in project root for information.
 #   ---------------------------------------------------------------------------------
 from __future__ import annotations
-from osintbuddy import OBRegistry, OBPlugin, transform, discover_plugins
-from osintbuddy.node import TextInput
+from osintbuddy import OBRegistry, OBPlugin, transform
+from osintbuddy.elements.inputs import TextInput
 
 
 # Mock

@@ -2,7 +2,7 @@ def plugin_source_template(label: str, description: str, author: str) -> str:
     class_name = ''.join(x for x in filter(str.isalnum, label.title()) if not x.isspace())
 
     return f'''from osintbuddy import DiscoverableEntity, transform
-from osintbuddy.elements import TextInput
+from osintbuddy.elements.inputs import TextInput
 
 class {class_name}(ob.DiscoverableEntity):
     label = "{label}"
