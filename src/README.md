@@ -4,9 +4,7 @@ The plugins library for [jerlendds/osintbuddy](https://github.com/jerlendds/osin
 
 ***Please note:** [OSINTBuddy plugins](https://github.com/jerlendds/osintbuddy-plugins) are still in early alpha and breaking changes may occasionally occur in the API. That said, if you remain on the `main` branch and avoid accessing protected methods we will try our best to avoid introducing breaking changes.*
 
-### **NOTICE:** There has been a major update to plugins, any created plugins will have to be updated to use the new, and more convenient data access method:
-  - Remove `name` from any `ob.Plugin`
-  - Update `node['data']` access to be `node.label_defined_in_node`
+- **NOTICE:** There has been a major update to plugins, any created plugins will have to be updated.
     - Please see the introduction to the plugin system below
 
 
@@ -17,29 +15,30 @@ To make this a bit more clear please see the below example...
 
 ```py
 from pydantic import BaseModel
-import osintbuddy import transform, Plugin
+import osintbuddy import transform, DiscoverableEntity
 from osintbuddy.elements import TextInput, DropdownInput, Title, CopyText
 from osintbuddy.errors import OBPluginError
 
 
-class CSESearchResults(Plugin):
-    label = "CSE Result"
-    name = "CSE result"
-    show_label = False  # do not show this on the entities dialog 
+class CSESearchResults(DiscoverableEntity):
+    label = "Google CSE Result"
+    # do not show this on the entities dialog 
     # the user sees on the left of the project graph screen
+    show_label = False 
     color = "#058F63"
-    node = [
+    # Properties displayed while in entity edit mode on the
+    # osintbuddy graph UI
+    properties = [
         Title(label="Result"),
         CopyText(label="URL"),
         CopyText(label="Cache URL"),
     ]
 
 
-class CSESearchPlugin(Plugin):
-    label = "CSE Search"
-    name = "CSE search"
+class CSESearchPlugin(DiscoverableEntity):
+    label = "Google CSE Search"
     color = "#2C7237"
-    node = [
+    properties = [
         [
             TextInput(label="Query", icon="search"),
             TextInput(label="Pages", icon="123", default="1"),
@@ -50,33 +49,40 @@ class CSESearchPlugin(Plugin):
     @transform(label="To cse results", icon="search")
     async def transform_to_cse_results(
       self,
-      node: BaseModel,  # dynamically generated pydantic model 
-      # that is mapped from the above labels contained within `node`
-      use  # a pydantic model allowing you to access a selenium instance
-      # (and eventually a gremlin graph and settings api) 
+      # context: dynamically generated pydantic model 
+      # that is mapped from the above labels (note the `properties = [...]`) contained within `context`
+      context: BaseModel, 
+      # use: a pydantic model allowing you to access a selenium instance
+      # (and eventually more...!) 
+      use
     ):
         results = []
 
-        if not node.query:
+        if not context.query:
           raise OBPluginError((
             'You can send error messages to the user here'
             'if they forget to submit data or if some other error occurs'
           ))
 
+        if not context.cse_categories:
+            raise OBPluginError('The CSE Category field is required to transform.')
+
         # notice how you can access data returned from the context menu
         # of this node; using the label name in snake case
-        print(node.cse_categories, node.query, node.pages) 
+        print(context.cse_categories, context.query, context.pages) 
 
         ... # (removed code for clarity)
+        response = await self.get_cse_results(context.query, context.cse_categories, context.max_results)
 
-        if resp:
-            for result in resp["results"]:
+        if response:
+            cse_result_entity = await EntityRegistry.get_plugin("google_cse_result")
+            for result in response["results"]:
                 url = result.get("breadcrumbUrl", {})
                 # some elements you can store more than just a string,
                 # (these elements storing dicts are mapped 
                 # to janusgraph as properties with the names
                 # result_title, result_subtitle, and result_text)
-                blueprint = CSESearchResults.blueprint(
+                ui_entity = cse_result_entity.create(
                     result={
                         "title": result.get("titleNoFormatting"),
                         "subtitle": url.get("host") + url.get("crumbs"),
@@ -85,11 +91,14 @@ class CSESearchPlugin(Plugin):
                     url=result.get("unescapedUrl"),
                     cache_url=result.get("cacheUrl"),
                 )
-                results.append(blueprint)
+                results.append(ui_entity)
         # here we return a list of blueprints (blueprints are dicts)
         # but you can also return a single blueprint without a list
         return results
 
+    async def get_cse_results(self, query, url, max_results=100):
+        ...
 ```
 
+        
 

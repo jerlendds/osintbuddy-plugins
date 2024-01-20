@@ -10,11 +10,11 @@ import os, imp, importlib
 from osintbuddy.utils import to_snake_case
 
 
-IcgNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
+EntityConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
 
 class EntityProperties(BaseModel):
     source_entity: str
-    model_config = IcgNodeConfig
+    model_config = EntityConfig
 
 
 class TransformUse(BaseModel):
