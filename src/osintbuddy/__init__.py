@@ -10,5 +10,6 @@ from osintbuddy.plugins import (
     transform,
     register_transform,
     load_plugin_source,
+    EntityConfig,
 )
 __version__ = "0.0.5"

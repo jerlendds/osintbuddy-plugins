@@ -1,6 +1,7 @@
 import imp, inspect
+from mypy_extensions import TypedDict
 from types import ModuleType
-from typing import TYPE_CHECKING, List, Any, Callable
+from typing import TYPE_CHECKING, List, Any, Callable, Dict, Literal, Union
 from collections import defaultdict
 from pydantic import BaseModel, ConfigDict
 from osintbuddy.elements.base import BaseElement
@@ -17,14 +18,18 @@ class EntityProperties(BaseModel):
     model_config = EntityConfig
 
 
+class EntityConfig(BaseModel):
+    enabled: bool = True
+    model_config = EntityConfig
+
+
 class TransformUse(BaseModel):
     get_driver: Callable[[], None]
-
+    config: EntityConfig
 
 
 class EntityRegistry(type):
     entities = []
-    _labels = []
     _visible_entities = []
 
     def __init__(cls, name, bases, attrs):
@@ -42,7 +47,6 @@ class EntityRegistry(type):
                     'description': cls.description,
                     'author': cls.author
                 })
-            EntityRegistry._labels.append(label)
             EntityRegistry.entities.append(cls)
 
     @classmethod
@@ -56,6 +60,20 @@ class EntityRegistry(type):
         """
         for entity in cls.entities:
             if entity.label == plugin_label or to_snake_case(entity.label) == to_snake_case(plugin_label):
+                return entity
+
+    @classmethod
+    def get(cls, plugin_label: str):
+        """
+        Returns the corresponding plugin class for a given plugin_label or
+        'None' if not found.
+
+        :param plugin_label: The label of the plugin to be returned.
+        :return: The plugin class or None if not found.
+        """
+        for entity in cls.entities:
+            snake_case_labels_equal: bool = to_snake_case(entity.label) == to_snake_case(plugin_label)
+            if entity.label == plugin_label or snake_case_labels_equal:
                 return entity
 
     @staticmethod
@@ -87,7 +105,6 @@ class EntityRegistry(type):
         :param dir_path: The directory path where the plugins are located.
         :return: List of plugin classes
         """
-        
         if not dir_path.endswith("/"):
             dir_path = f"{dir_path}/"
 
@@ -106,11 +123,13 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    properties: List[BaseElement] = []
-    color: str = '#145070'
     label: str = ''
-    icon: str = 'transform'
+    icon: str = 'file-unknown'
+    color='#145070'
     show_label = True
+
+    properties: List[BaseElement] = []
+    config: EntityConfig | Dict[str, str] = EntityConfig(enabled=False)
 
     author = 'Unknown'
     description = 'No description.'
@@ -128,23 +147,8 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
             if hasattr(func, "label")
         ]
 
-    def __call__(self, **kwargs):
-        return self.create(**kwargs)
-
-    @staticmethod
-    def _build_entity_properties(element, **properties):
-        label = to_snake_case(element["label"])
-        for element_key in properties.keys():
-            if element_key == label:
-                if isinstance(properties[label], str):
-                    element["value"] = properties[label]
-                elif isinstance(properties[label], dict):
-                    for t in properties[label]:
-                        element[t] = properties[label][t]
-        return element
-
     @classmethod
-    def create(cls, **data_properties):
+    def create(cls, **properties):
         """
         Generate and return a dictionary representing the entity as seen on the ui.
         """
@@ -164,15 +168,30 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
             if isinstance(element, list):
                 row_elms = []
                 for elm in element:
-                    row_elms.append(cls._build_entity_properties(elm.to_dict(), **data_properties))
+                    row_elms.append(cls._build_entity_properties(elm.to_dict(), **properties))
                 node["elements"].append(row_elms)
             # otherwise position the entity elements vertically on the actual UI entity 
             # (elements aka properties can be viewed after double clicking an entity on the graph UI,
             # this toggles that entity into edit mode displaying these elements we are building here)
             else:
-                element_row = cls._build_entity_properties(element.to_dict(), **data_properties)
+                element_row = cls._build_entity_properties(element.to_dict(), **properties)
                 node["elements"].append(element_row)
         return node
+
+    def __call__(self, **properties):
+        return self.create(**properties)
+
+    @staticmethod
+    def _build_entity_properties(element, **properties):
+        label = to_snake_case(element["label"])
+        for element_key in properties.keys():
+            if element_key == label:
+                if isinstance(properties[label], str):
+                    element["value"] = properties[label]
+                elif isinstance(properties[label], dict):
+                    for t in properties[label]:
+                        element[t] = properties[label][t]
+        return element
 
     async def run_transform(self, transform_type: str, transform_context: dict, use: TransformUse) -> Any:
         """ Return output from a function accepting node data.
@@ -200,6 +219,19 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
             return transform
         return None
 
+    @classmethod
+    def _map_to_transform_context(cls, entity_context: dict) -> EntityProperties:
+        transform_map: dict = {}
+        data: dict = entity_context.get('data', {})
+        entity_type = entity_context.get("data", {}).get("label")
+        elements: list[dict] = data.get('elements', [])
+        for element in elements:
+            if isinstance(element, list):
+                [cls._map_element(transform_map, elm) for elm in element]
+            else:
+                cls._map_element(transform_map, element)
+        return EntityProperties(source_entity=entity_type, **transform_map)
+
     @staticmethod
     def _map_element(transform_map: dict, element: dict):
         label = to_snake_case(element.pop('label', None))
@@ -213,19 +245,6 @@ class DiscoverableEntity(object, metaclass=EntityRegistry):
                 transform_map[label] = v
             else:
                 transform_map[label][k] = v
-
-    @classmethod
-    def _map_to_transform_context(cls, entity_context: dict) -> EntityProperties:
-        transform_map: dict = {}
-        data: dict = entity_context.get('data', {})
-        entity_type = entity_context.get("data", {}).get("label")
-        elements: list[dict] = data.get('elements', [])
-        for element in elements:
-            if isinstance(element, list):
-                [cls._map_element(transform_map, elm) for elm in element]
-            else:
-                cls._map_element(transform_map, element)
-        return EntityProperties(source_entity=entity_type, **transform_map)
 
 
 def plugin_results_middleman(f):
@@ -262,7 +281,7 @@ def load_plugin_source(
 
 def transform(label, icon='transform', edge_label='has_result'):
     """
-    A decorator add transforms to an osintbuddy plugin.
+    A decorator to add transforms (methods) to an osintbuddy entity plugin.
 
     Usage:
     @transform(label=<label_text>, icon=<tabler_react_icon_name>)
@@ -276,42 +295,50 @@ def transform(label, icon='transform', edge_label='has_result'):
     :return: A decorator for the plugin transform method.
     """
     def decorator_transform(func, edge_label=edge_label):
-        async def wrapper(self, context, **kwargs):
+        async def transform_wrapper(self, context, **kwargs):
             return await func(self, context, **kwargs)
-        wrapper.label = label
-        wrapper.icon = icon
-        wrapper.edge_label = edge_label
-        return wrapper
+        transform_wrapper.label = label
+        transform_wrapper.icon = icon
+        transform_wrapper.edge_label = edge_label
+        return transform_wrapper
     return decorator_transform
 
 
-def register_transform(entity_class, label, icon='transform', edge_label='has_result'):
+def register_transform(
+    entity_class: DiscoverableEntity,
+    label: str = "No name",
+    icon: str='transform',
+    edge_label='has_result'
+):
     """
-    TODO: Document me
+    A decorator to add transforms (methods) to an osintbuddy entity plugin class. This implementation allows you to define more transforms for entities in seperate files
+
+    Usage:
+    TestEntity =  EntityRegistry.get("url")
+    @register_transform(TestEntity, label="To transform test")
+    async def transform_wtf(self, context, use):
+        url_entity = EntityRegistry.get("url")
+        return url_entity.create(url="https://osintbuddy.com")
+
+    :param entity_class: DiscoverableEntity, An entity class
+    :param label: str, A string representing the label for the transform
+        method, which can be utilized for displaying in the context menu.
+    :param icon: str, Optional icon name, representing the icon associated
+        displayed by the transform label. Default is "list".
+    :return: A decorator for the plugin transform method.
     """
     def decorator_transform(func, edge_label=edge_label):
-        async def wrapper(context, **kwargs):
+        async def transform_wrapper(context, **kwargs):
             return await func(context, **kwargs)
         func.label = label
         func.icon = icon
         func.edge_label = edge_label
         if isinstance(entity_class, str):
-            target_entity = EntityRegistry._get_plugin(entity_class)
-            setattr(target_entity, func.__name__, func)
-        else:    
+            if target_entity := EntityRegistry.get(entity_class):
+                setattr(target_entity, func.__name__, func)
+            else:
+                print('target entity class not found!')
+        else:
             setattr(entity_class, func.__name__, func)
-        return wrapper
+        return transform_wrapper
     return decorator_transform
-
-
-def get_plugin(plugin_label: str) -> None | DiscoverableEntity:
-    """
-    Returns the corresponding plugin class for a given plugin_label or
-    'None' if not found.
-
-    :param plugin_label: The label of the plugin to be returned.
-    :return: The plugin class or None if not found.
-    """
-    for entity in EntityRegistry.entities:
-        if entity.label == plugin_label or to_snake_case(entity.label) == to_snake_case(plugin_label):
-            return entity
